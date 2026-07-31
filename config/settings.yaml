@@ -1,0 +1,16 @@
+app:
+  name: JarvisAI
+  version: 0.3
+
+database:
+  url: sqlite+aiosqlite:///data/jarvis.db
+
+logging:
+  level: INFO
+
+openai:
+  api_key: ""
+
+tuya:
+  access_id: ""
+  access_secret: ""

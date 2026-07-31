@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+import webrtcvad
+
+
+class VoiceActivityDetector:
+    """
+    Wrapper around WebRTC Voice Activity Detection.
+
+    mode:
+        0 = least aggressive
+        3 = most aggressive
+    """
+
+    def __init__(
+        self,
+        mode: int = 2,
+    ) -> None:
+        self.vad = webrtcvad.Vad(mode)
+
+    def is_speech(
+        self,
+        frame: bytes,
+        sample_rate: int,
+    ) -> bool:
+        """
+        Check whether a PCM frame contains speech.
+
+        frame:
+            16-bit mono PCM bytes
+
+        sample_rate:
+            8000 / 16000 / 32000 / 48000
+        """
+
+        return self.vad.is_speech(
+            frame,
+            sample_rate,
+        )

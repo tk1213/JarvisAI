@@ -1,0 +1,47 @@
+
+from jarvis.audio.vad import VoiceActivityDetector
+
+from jarvis.audio.stream import AudioStream
+
+
+def main() -> None:
+    stream = AudioStream(
+        sample_rate=16000,
+        frame_duration_ms=20,
+    )
+
+    vad = VoiceActivityDetector(
+        mode=2,
+    )
+
+    print("=" * 60)
+    print("Voice Activity Detection Test")
+    print("=" * 60)
+    print("Listening...")
+    print("พูดเพื่อทดสอบ หรือเงียบไว้เพื่อดูผล")
+    print()
+
+    last_state = None
+
+    try:
+        for frame in stream.frames():
+
+            speech = vad.is_speech(
+                frame,
+                sample_rate=16000,
+            )
+
+            if speech != last_state:
+                if speech:
+                    print("🎤 Speech")
+                else:
+                    print("...")
+                last_state = speech
+
+    except KeyboardInterrupt:
+        print()
+        print("Stopped")
+
+
+if __name__ == "__main__":
+    main()

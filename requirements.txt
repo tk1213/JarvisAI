@@ -1,0 +1,12 @@
+loguru
+python-dotenv
+pyyaml
+pydantic
+pydantic-settings
+sqlalchemy
+aiosqlite
+openai
+sounddevice
+numpy
+soundfile
+scipy
