@@ -6,3 +6,4 @@ pydantic-settings
 sqlalchemy
 aiosqlite
 openai
+httpx

@@ -1,4 +1,5 @@
 from jarvis.core.command_registry import registry
+from jarvis.version import __version__
 
 
 class CommandService:
@@ -22,4 +23,4 @@ class CommandService:
 
     def version(self):
 
-        print("JarvisAI Version 0.2")
+        print(f"JarvisAI Version {__version__}")

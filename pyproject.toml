@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jarvis-ai"
-version = "0.3.0"
+dynamic = ["version"]
 description = "A production-oriented JARVIS-style AI assistant"
 requires-python = ">=3.12"
 
@@ -17,6 +17,7 @@ dependencies = [
     "sqlalchemy",
     "aiosqlite",
     "openai",
+    "httpx",
 ]
 
 [project.scripts]
@@ -27,3 +28,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.dynamic]
+version = {attr = "jarvis.version.__version__"}

@@ -11,3 +11,4 @@ Requires-Dist: pydantic-settings
 Requires-Dist: sqlalchemy
 Requires-Dist: aiosqlite
 Requires-Dist: openai
+Requires-Dist: httpx

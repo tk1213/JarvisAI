@@ -1,25 +1,30 @@
+from __future__ import annotations
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
-from jarvis.core.config import config
+from jarvis.config import settings
 from jarvis.core.logger import log
 from jarvis.database.models import Base
+from jarvis.database.schema_memory import (
+    MEMORY_INDEXES,
+    MEMORY_SCHEMA,
+)
 
 
 class DatabaseManager:
     def __init__(self) -> None:
-        database_url = config.get("database", "url")
-
         self.engine: AsyncEngine = create_async_engine(
-            database_url,
+            settings.database_url,
             echo=False,
         )
 
@@ -32,29 +37,60 @@ class DatabaseManager:
         self.started = False
 
     async def startup(self) -> None:
+        if self.started:
+            return
+
         log.info("Connecting to database...")
 
         async with self.engine.begin() as connection:
-            await connection.execute(text("SELECT 1"))
-            await connection.run_sync(Base.metadata.create_all)
+            await connection.execute(
+                text("SELECT 1")
+            )
+
+            await connection.run_sync(
+                Base.metadata.create_all
+            )
+
+            await self.create_memory_tables(
+                connection
+            )
 
         self.started = True
 
         log.info("Database connected")
 
+    async def create_memory_tables(
+        self,
+        connection: AsyncConnection,
+    ) -> None:
+        await connection.exec_driver_sql(
+            MEMORY_SCHEMA
+        )
+
+        for sql in MEMORY_INDEXES:
+            await connection.exec_driver_sql(
+                sql
+            )
+
     async def health_check(self) -> bool:
         try:
             async with self.engine.connect() as connection:
-                await connection.execute(text("SELECT 1"))
+                await connection.execute(
+                    text("SELECT 1")
+                )
 
             return True
 
         except Exception:  # noqa: BLE001
-            log.exception("Database health check failed")
+            log.exception(
+                "Database health check failed"
+            )
             return False
 
     @asynccontextmanager
-    async def session(self) -> AsyncIterator[AsyncSession]:
+    async def session(
+        self,
+    ) -> AsyncIterator[AsyncSession]:
         async with self.session_factory() as session:
             try:
                 yield session

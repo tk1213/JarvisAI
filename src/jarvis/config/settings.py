@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,8 +18,18 @@ class Settings(BaseSettings):
     # Application
     # ---------------------------------------------------------
     app_name: str = "JarvisAI"
-    app_environment: str = "development"
+
+    app_environment: str = Field(
+        default="development",
+        validation_alias=AliasChoices(
+            "APP_ENVIRONMENT",
+            "APP_ENV",
+        ),
+    )
+
     debug: bool = False
+
+    wake_word: str = "jarvis"
 
     # ---------------------------------------------------------
     # Logging
@@ -29,7 +39,9 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------
     # Database
     # ---------------------------------------------------------
-    database_url: str = "sqlite+aiosqlite:///./jarvis.db"
+    database_url: str = (
+        "sqlite+aiosqlite:///./jarvis.db"
+    )
 
     # ---------------------------------------------------------
     # OpenAI
@@ -38,7 +50,13 @@ class Settings(BaseSettings):
         default=None,
         repr=False,
     )
+
     openai_model: str = "gpt-5.5"
+
+    # ---------------------------------------------------------
+    # Smart Home
+    # ---------------------------------------------------------
+    smart_home_provider: str = "mock"
 
     # ---------------------------------------------------------
     # Tuya
@@ -47,11 +65,24 @@ class Settings(BaseSettings):
         default=None,
         repr=False,
     )
+
     tuya_access_key: str | None = Field(
         default=None,
         repr=False,
+        validation_alias=AliasChoices(
+            "TUYA_ACCESS_KEY",
+            "TUYA_ACCESS_SECRET",
+        ),
     )
-    tuya_endpoint: str = "https://openapi.tuyaus.com"
+
+    tuya_device_id: str | None = Field(
+        default=None,
+        repr=False,
+    )
+
+    tuya_endpoint: str = (
+        "https://openapi.tuyaus.com"
+    )
 
     # ---------------------------------------------------------
     # Speech-to-text
@@ -73,21 +104,38 @@ class Settings(BaseSettings):
 
     @property
     def is_development(self) -> bool:
-        return self.app_environment.lower() == "development"
+        return (
+            self.app_environment.lower()
+            == "development"
+        )
 
     @property
     def is_production(self) -> bool:
-        return self.app_environment.lower() == "production"
+        return (
+            self.app_environment.lower()
+            == "production"
+        )
 
     @property
     def has_openai_credentials(self) -> bool:
-        return bool(self.openai_api_key)
+        return bool(
+            self.openai_api_key
+        )
 
     @property
     def has_tuya_credentials(self) -> bool:
         return bool(
             self.tuya_access_id
             and self.tuya_access_key
+        )
+
+    @property
+    def use_tuya(self) -> bool:
+        return (
+            self.smart_home_provider
+            .lower()
+            .strip()
+            == "tuya"
         )
 
 

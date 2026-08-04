@@ -1,33 +1,41 @@
 from __future__ import annotations
 
-from jarvis.audio.player import AudioPlayer
-from jarvis.audio.recorder import AudioRecorder
+from collections.abc import Awaitable, Callable
+from typing import Any
+
+from jarvis.config import settings
 from jarvis.core.container import container
+from jarvis.core.event_bus import event_bus
 from jarvis.core.logger import log
 from jarvis.core.plugin_loader import load_plugins
+from jarvis.core.service_factory import ServiceFactory
 from jarvis.core.task_manager import task_manager
 from jarvis.database.db import DatabaseManager
+from jarvis.services.ai_capability_resolver import AICapabilityResolver
 from jarvis.services.ai_service import AIService
+from jarvis.services.capability_registry import CapabilityRegistry
+from jarvis.services.capability_router import CapabilityRouter
 from jarvis.services.command_service import CommandService
 from jarvis.services.conversation_manager import ConversationManager
-from jarvis.services.health_service import HealthService
 from jarvis.services.heartbeat_service import HeartbeatService
 from jarvis.services.memory_service import MemoryService
-from jarvis.services.session_manager import SessionManager
-from jarvis.services.stt_service import STTService
 from jarvis.services.system_service import SystemService
-from jarvis.services.tool_router import ToolRouter
-from jarvis.services.tts_service import TTSService
-from jarvis.services.voice_service import VoiceService
-from jarvis.smart_home.mock_adapter import MockAdapter
+from jarvis.services.wake_word_service import WakeWordService
+from jarvis.skills.context import SkillContext
+from jarvis.skills.loader import SkillLoader
+from jarvis.skills.manager import SkillManager
 from jarvis.smart_home.service import SmartHomeService
-from jarvis.speech.stt import SpeechToText
-from jarvis.speech.tts import TextToSpeech
 
 
 class JarvisApplication:
     def __init__(self) -> None:
         self.started = False
+
+        self._system_started = False
+        self._database_started = False
+        self._smart_home_connected = False
+        self._skills_started = False
+        self._wake_word_created = False
 
     async def start(
         self,
@@ -38,161 +46,360 @@ class JarvisApplication:
 
         log.info("Initializing Jarvis Application...")
 
-        # ---------------------------------------------------------
-        # Core components
-        # ---------------------------------------------------------
-        system = SystemService()
-        commands = CommandService()
-        database = DatabaseManager()
+        if len(container) > 0:
+            container.clear()
 
-        # ---------------------------------------------------------
-        # Application services
-        # ---------------------------------------------------------
-        memory_service = MemoryService(database)
-        ai_service = AIService()
-        session_manager = SessionManager()
-        tool_router = ToolRouter()
+        self._reset_lifecycle_state()
 
-        # ---------------------------------------------------------
-        # Smart Home services
-        # ---------------------------------------------------------
-        smart_home_adapter = MockAdapter()
-        smart_home_service = SmartHomeService(
-            adapter=smart_home_adapter,
-        )
+        try:
+            factory = ServiceFactory(container)
+            factory.register_all()
 
-        conversation_manager = ConversationManager(
-            ai=ai_service,
-            memory=memory_service,
-            router=tool_router,
-            smart_home=smart_home_service,
-        )
+            self._wake_word_created = True
 
-        heartbeat_service = HeartbeatService()
-        health_service = HealthService()
-
-        # ---------------------------------------------------------
-        # Speech-to-text components
-        # ---------------------------------------------------------
-        recorder = AudioRecorder()
-        stt_engine = SpeechToText()
-
-        stt_service = STTService(
-            recorder=recorder,
-            stt=stt_engine,
-        )
-
-        # ---------------------------------------------------------
-        # Text-to-speech components
-        # ---------------------------------------------------------
-        player = AudioPlayer()
-        tts_engine = TextToSpeech()
-
-        tts_service = TTSService(
-            player=player,
-            tts=tts_engine,
-        )
-
-        # ---------------------------------------------------------
-        # Voice service
-        # ---------------------------------------------------------
-        voice_service = VoiceService(
-            stt=stt_service,
-            conversation=conversation_manager,
-            tts=tts_service,
-            session=session_manager,
-        )
-
-        # ---------------------------------------------------------
-        # Register core services
-        # ---------------------------------------------------------
-        container.register("system", system)
-        container.register("commands", commands)
-        container.register("database", database)
-        container.register("tool_router", tool_router)
-        container.register("session", session_manager)
-
-        # ---------------------------------------------------------
-        # Register application services
-        # ---------------------------------------------------------
-        container.register("memory", memory_service)
-        container.register("ai", ai_service)
-        container.register("conversation", conversation_manager)
-        container.register("heartbeat", heartbeat_service)
-        container.register("health", health_service)
-
-        # ---------------------------------------------------------
-        # Register Smart Home services
-        # ---------------------------------------------------------
-        container.register(
-            "smart_home_adapter",
-            smart_home_adapter,
-        )
-        container.register(
-            "smart_home",
-            smart_home_service,
-        )
-
-        # ---------------------------------------------------------
-        # Register speech-to-text services
-        # ---------------------------------------------------------
-        container.register("recorder", recorder)
-        container.register("stt_engine", stt_engine)
-        container.register("stt", stt_service)
-
-        # ---------------------------------------------------------
-        # Register text-to-speech services
-        # ---------------------------------------------------------
-        container.register("player", player)
-        container.register("tts_engine", tts_engine)
-        container.register("tts", tts_service)
-
-        # ---------------------------------------------------------
-        # Register voice service
-        # ---------------------------------------------------------
-        container.register("voice", voice_service)
-
-        # ---------------------------------------------------------
-        # Start core services
-        # ---------------------------------------------------------
-        system.startup()
-        await database.startup()
-        await smart_home_service.connect()
-
-        # Register built-in commands
-        commands.register_default_commands()
-
-        # ---------------------------------------------------------
-        # Start background services
-        # ---------------------------------------------------------
-        if start_background_tasks:
-            task_manager.create_task(
+            system = container.resolve(
+                "system",
+                SystemService,
+            )
+            commands = container.resolve(
+                "commands",
+                CommandService,
+            )
+            database = container.resolve(
+                "database",
+                DatabaseManager,
+            )
+            smart_home_service = container.resolve(
+                "smart_home",
+                SmartHomeService,
+            )
+            heartbeat_service = container.resolve(
                 "heartbeat",
-                heartbeat_service.run(),
+                HeartbeatService,
+            )
+            ai_service = container.resolve(
+                "ai",
+                AIService,
+            )
+            memory_service = container.resolve(
+                "memory",
+                MemoryService,
+            )
+            conversation_manager = container.resolve(
+                "conversation",
+                ConversationManager,
             )
 
-        # Load external plugins
-        load_plugins()
+            skill_context = SkillContext(
+                ai=ai_service,
+                memory=memory_service,
+                smart_home=smart_home_service,
+                event_bus=event_bus,
+                settings=settings,
+            )
 
-        self.started = True
-        log.info("Jarvis Application Ready")
+            skill_manager = SkillManager()
+
+            skill_loader = SkillLoader(
+                manager=skill_manager,
+                context=skill_context,
+            )
+
+            skill_loader.load_package(
+                "jarvis.skills.builtin",
+            )
+
+            capability_registry = (
+                CapabilityRegistry.from_capabilities(
+                    skill_manager.list_capability_definitions(),
+                )
+            )
+
+            capability_router = CapabilityRouter(
+                skill_manager=skill_manager,
+                registry=capability_registry,
+            )
+
+            ai_capability_resolver = AICapabilityResolver(
+                ai=ai_service,
+                registry=capability_registry,
+            )
+
+            conversation_manager.set_capability_router(
+                capability_router,
+            )
+
+            conversation_manager.set_capability_resolver(
+                ai_capability_resolver,
+            )
+
+            container.register(
+                "skill_manager",
+                skill_manager,
+                overwrite=False,
+            )
+
+            container.register(
+                "capability_registry",
+                capability_registry,
+                overwrite=False,
+            )
+
+            container.register(
+                "capability_router",
+                capability_router,
+                overwrite=False,
+            )
+
+            container.register(
+                "ai_capability_resolver",
+                ai_capability_resolver,
+                overwrite=False,
+            )
+
+            system.startup()
+            self._system_started = True
+
+            await database.startup()
+            self._database_started = True
+
+            await smart_home_service.connect()
+            self._smart_home_connected = True
+
+            await skill_manager.startup()
+            self._skills_started = True
+
+            commands.register_default_commands()
+
+            if start_background_tasks:
+                task_manager.create_task(
+                    "heartbeat",
+                    heartbeat_service.run(),
+                )
+
+            load_plugins()
+
+            self.started = True
+            log.info("Jarvis Application Ready")
+
+        except Exception:
+            log.exception(
+                "Jarvis Application startup failed"
+            )
+
+            await self._rollback_startup()
+            raise
+
+    async def _rollback_startup(self) -> None:
+        log.info(
+            "Rolling back Jarvis Application startup..."
+        )
+
+        await self._safe_async_cleanup(
+            "background tasks",
+            task_manager.stop_all,
+        )
+
+        if self._skills_started:
+            skill_manager = container.resolve(
+                "skill_manager",
+                SkillManager,
+            )
+
+            await self._safe_async_cleanup(
+                "skills",
+                skill_manager.shutdown,
+            )
+
+            self._skills_started = False
+
+        if self._smart_home_connected:
+            smart_home_service = container.resolve(
+                "smart_home",
+                SmartHomeService,
+            )
+
+            await self._safe_async_cleanup(
+                "smart home",
+                smart_home_service.disconnect,
+            )
+
+            self._smart_home_connected = False
+
+        if self._database_started:
+            database = container.resolve(
+                "database",
+                DatabaseManager,
+            )
+
+            await self._safe_async_cleanup(
+                "database",
+                database.shutdown,
+            )
+
+            self._database_started = False
+
+        if self._system_started:
+            system = container.resolve(
+                "system",
+                SystemService,
+            )
+
+            self._safe_sync_cleanup(
+                "system",
+                system.shutdown,
+            )
+
+            self._system_started = False
+
+        if self._wake_word_created:
+            wake_word = container.resolve(
+                "wake_word",
+                WakeWordService,
+            )
+
+            self._safe_sync_cleanup(
+                "wake word",
+                wake_word.close,
+            )
+
+            self._wake_word_created = False
+
+        container.clear()
+        self.started = False
+
+        log.info(
+            "Jarvis Application startup rollback complete"
+        )
 
     async def shutdown(self) -> None:
-        if not self.started:
+        if (
+            not self.started
+            and not self._has_active_resources()
+        ):
             return
 
         log.info("Shutting down Jarvis Application...")
 
-        await task_manager.stop_all()
+        await self._safe_async_cleanup(
+            "background tasks",
+            task_manager.stop_all,
+        )
 
-        smart_home_service = container.get("smart_home")
-        await smart_home_service.disconnect()
+        if self._skills_started:
+            skill_manager = container.resolve(
+                "skill_manager",
+                SkillManager,
+            )
 
-        database = container.get("database")
-        await database.shutdown()
+            await self._safe_async_cleanup(
+                "skills",
+                skill_manager.shutdown,
+            )
 
-        system = container.get("system")
-        system.shutdown()
+            self._skills_started = False
 
+        if self._smart_home_connected:
+            smart_home_service = container.resolve(
+                "smart_home",
+                SmartHomeService,
+            )
+
+            await self._safe_async_cleanup(
+                "smart home",
+                smart_home_service.disconnect,
+            )
+
+            self._smart_home_connected = False
+
+        if self._database_started:
+            database = container.resolve(
+                "database",
+                DatabaseManager,
+            )
+
+            await self._safe_async_cleanup(
+                "database",
+                database.shutdown,
+            )
+
+            self._database_started = False
+
+        if self._system_started:
+            system = container.resolve(
+                "system",
+                SystemService,
+            )
+
+            self._safe_sync_cleanup(
+                "system",
+                system.shutdown,
+            )
+
+            self._system_started = False
+
+        if self._wake_word_created:
+            wake_word = container.resolve(
+                "wake_word",
+                WakeWordService,
+            )
+
+            self._safe_sync_cleanup(
+                "wake word",
+                wake_word.close,
+            )
+
+            self._wake_word_created = False
+
+        container.clear()
         self.started = False
+
         log.info("Jarvis Application Stopped")
+
+    async def _safe_async_cleanup(
+        self,
+        name: str,
+        cleanup: Callable[[], Awaitable[Any]],
+    ) -> None:
+        try:
+            await cleanup()
+
+        except Exception:  # noqa: BLE001
+            log.exception(
+                "Cleanup failed: {}",
+                name,
+            )
+
+    def _safe_sync_cleanup(
+        self,
+        name: str,
+        cleanup: Callable[[], Any],
+    ) -> None:
+        try:
+            cleanup()
+
+        except Exception:  # noqa: BLE001
+            log.exception(
+                "Cleanup failed: {}",
+                name,
+            )
+
+    def _has_active_resources(self) -> bool:
+        return any(
+            (
+                self._system_started,
+                self._database_started,
+                self._smart_home_connected,
+                self._skills_started,
+                self._wake_word_created,
+            )
+        )
+
+    def _reset_lifecycle_state(self) -> None:
+        self.started = False
+
+        self._system_started = False
+        self._database_started = False
+        self._smart_home_connected = False
+        self._skills_started = False
+        self._wake_word_created = False

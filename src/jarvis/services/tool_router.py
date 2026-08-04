@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from enum import Enum
 
+from jarvis.smart_home.text_normalizer import (
+    SmartHomeTextNormalizer,
+)
+
 
 class ToolType(str, Enum):
     AI = "ai"
@@ -11,46 +15,146 @@ class ToolType(str, Enum):
 
 
 class ToolRouter:
+    """
+    Route user requests to the appropriate Jarvis subsystem.
+
+    Routing priority:
+    1. System
+    2. Plugin
+    3. Smart Home
+    4. AI fallback
+
+    Smart Home text normalization is handled by
+    SmartHomeTextNormalizer.
+    """
+
     def route(
         self,
         text: str,
     ) -> ToolType:
-        """
-        Determine which subsystem should handle the request.
-        """
+        normalized_text = (
+            SmartHomeTextNormalizer.normalize(
+                text
+            )
+        )
 
-        text = text.lower().strip()
+        if self._is_system_command(
+            normalized_text
+        ):
+            return ToolType.SYSTEM
 
-        smart_home_keywords = [
-            "เปิดไฟ",
-            "ปิดไฟ",
+        if self._is_plugin_command(
+            normalized_text
+        ):
+            return ToolType.PLUGIN
+
+        if self._is_smart_home_command(
+            normalized_text
+        ):
+            return ToolType.SMART_HOME
+
+        return ToolType.AI
+
+    @staticmethod
+    def _is_smart_home_command(
+        text: str,
+    ) -> bool:
+        smart_home_keywords = (
+            # Thai actions
+            "เปิด",
+            "ปิด",
+            "สลับ",
+            "สถานะ",
+
+            # Thai devices
             "ไฟ",
             "หลอดไฟ",
             "พัดลม",
             "แอร์",
+            "เครื่องปรับอากาศ",
+            "ประตูโรงรถ",
+            "โรงรถ",
             "ปลั๊ก",
-        ]
+            "สมาร์ทปลั๊ก",
 
-        system_keywords = [
-            "ปิดโปรแกรม",
-            "shutdown",
-            "restart",
-            "รีสตาร์ท",
-        ]
+            # Thai device queries
+            "อุปกรณ์ทั้งหมด",
+            "รายการอุปกรณ์",
+            "มีอุปกรณ์อะไร",
 
-        plugin_keywords = [
+            # English devices
+            "smart plug",
+            "socket",
+            "light",
+            "fan",
+            "air conditioner",
+            "garage",
+
+            # English actions
+            "turn on",
+            "turn off",
+            "switch on",
+            "switch off",
+            "toggle",
+
+            # English device queries
+            "list devices",
+            "all devices",
+        )
+
+        return any(
+            keyword in text
+            for keyword in smart_home_keywords
+        )
+
+    @staticmethod
+    def _is_plugin_command(
+        text: str,
+    ) -> bool:
+        plugin_keywords = (
             "เล่นเพลง",
             "เปิดเพลง",
+            "ปิดเพลง",
+            "หยุดเพลง",
+            "เพลง",
             "music",
-        ]
+            "play music",
+            "stop music",
+        )
 
-        if any(keyword in text for keyword in smart_home_keywords):
-            return ToolType.SMART_HOME
+        return any(
+            keyword in text
+            for keyword in plugin_keywords
+        )
 
-        if any(keyword in text for keyword in system_keywords):
-            return ToolType.SYSTEM
+    @staticmethod
+    def _is_system_command(
+        text: str,
+    ) -> bool:
+        exact_commands = (
+            # English
+            "shutdown",
+            "restart",
+            "system version",
+            "jarvis version",
+            "system health",
+            "jarvis health",
+            "system ping",
+            "jarvis ping",
 
-        if any(keyword in text for keyword in plugin_keywords):
-            return ToolType.PLUGIN
+            # Thai
+            "ปิดโปรแกรม",
+            "รีสตาร์ท",
+            "เวอร์ชันระบบ",
+            "เวอร์ชั่นระบบ",
+            "เวอร์ชัน jarvis",
+            "เวอร์ชั่น jarvis",
+            "ตรวจสุขภาพระบบ",
+            "ตรวจสอบระบบ",
+            "ตรวจสอบระบบ jarvis",
+            "ทดสอบระบบ",
+            "ระบบทำงานไหม",
+            "ระบบทำงานหรือไม่",
+        )
 
-        return ToolType.AI
+        return text in exact_commands

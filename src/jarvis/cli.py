@@ -2,6 +2,7 @@ import argparse
 import asyncio
 
 from jarvis.main import chat, doctor, run
+from jarvis.version import __version__
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -57,7 +58,7 @@ def main() -> None:
                 raise SystemExit(1)
 
         elif command == "version":
-            print("JarvisAI 0.3.0")
+            print(f"JarvisAI {__version__}")
 
         else:
             parser.print_help()
