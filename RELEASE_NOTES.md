@@ -1,28 +1,30 @@
-# JarvisAI v0.4.0-alpha.36 — Sprint 3.5 Pack H
+# JarvisAI v0.4.0-alpha.42 — Sprint 3.6 Pack F
 
-Sprint 3.5 final end-to-end and regression gate.
+Sprint 3.6 final end-to-end and regression gate.
 
 This pack adds no new production behavior.
 
-It validates the complete durable execution-history stack:
+It validates the complete read-only execution-observability stack:
 
-- execution record DTO
-- JSON serialization
-- SQLAlchemy/SQLite repository
-- persistence service
-- automatic runtime persistence
-- execution history query service
-- execution history reporting
-- `system.execution_history` read-only capability
-- native tool mapping to `system_execution_history`
+- execution query and filtering
+- execution detail lookup
+- event timeline inspection
+- execution diagnostics
+- failure summary
+- retry detection
+- timeout detection
+- `system.execution_detail`
+- `system.execution_diagnostics`
+- native read-only tool exposure
+- preserved smart-home side-effect safety
 
 ## Safety
 
 The final live gate is read-only.
 
-It reads persisted execution history and verifies capability/tool exposure.
-It does not create a new plan and does not control smart-home devices.
+It does not retry, replay, compensate, rollback, or control smart-home
+devices.
 
 ## Goal
 
-If Pack H passes, Sprint 3.5 is complete and ready for a Git checkpoint.
+If Pack F passes, Sprint 3.6 is complete and ready for a Git checkpoint.

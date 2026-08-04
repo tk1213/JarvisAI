@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from jarvis.planner.execution_persistence import (
     ExecutionPersistenceService,
 )
+from jarvis.planner.execution_query import ExecutionQuery
 from jarvis.planner.execution_record import (
     PlanExecutionRecord,
 )
@@ -30,32 +31,46 @@ class ExecutionHistoryService:
         *,
         limit: int = 20,
     ) -> ExecutionHistorySummary:
-        if limit < 1:
-            raise ValueError(
-                "limit must be at least 1."
+        return await self.query(
+            ExecutionQuery(
+                limit=limit,
             )
-
-        records = await self._persistence.list_recent(
-            limit=limit
         )
+
+    async def query(
+        self,
+        query: ExecutionQuery,
+    ) -> ExecutionHistorySummary:
+        records = await self._persistence.list_recent(
+            limit=query.limit
+        )
+
+        filtered = [
+            record
+            for record in records
+            if self._matches(
+                record,
+                query=query,
+            )
+        ]
 
         completed = sum(
             record.success
-            for record in records
+            for record in filtered
         )
 
         failed = len(
-            records
+            filtered
         ) - completed
 
         return ExecutionHistorySummary(
             total=len(
-                records
+                filtered
             ),
             completed=completed,
             failed=failed,
             records=tuple(
-                records
+                filtered
             ),
         )
 
@@ -66,3 +81,27 @@ class ExecutionHistoryService:
         return await self._persistence.get(
             record_id
         )
+
+    @staticmethod
+    def _matches(
+        record: PlanExecutionRecord,
+        *,
+        query: ExecutionQuery,
+    ) -> bool:
+        if (
+            query.status is not None
+            and record.plan_status.lower()
+            != query.status
+        ):
+            return False
+
+        if query.capability is not None:
+            capabilities = {
+                step.capability
+                for step in record.steps
+            }
+
+            if query.capability not in capabilities:
+                return False
+
+        return True

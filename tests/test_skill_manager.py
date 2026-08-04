@@ -88,15 +88,17 @@ def test_list_capabilities(
     )
 
     assert manager.list_capabilities() == [
-        "smart_home.list_devices",
-        "smart_home.status",
-        "smart_home.toggle",
-        "smart_home.turn_off",
-        "smart_home.turn_on",
-        "system.execution_history",
-        "system.health",
-        "system.ping",
-        "system.version",
+    "smart_home.list_devices",
+    "smart_home.status",
+    "smart_home.toggle",
+    "smart_home.turn_off",
+    "smart_home.turn_on",
+    "system.execution_detail",
+    "system.execution_diagnostics",
+    "system.execution_history",
+    "system.health",
+    "system.ping",
+    "system.version",
     ]
 
 
@@ -125,6 +127,8 @@ def test_list_capability_definitions(
         "smart_home.toggle",
         "smart_home.turn_off",
         "smart_home.turn_on",
+        "system.execution_detail",
+        "system.execution_diagnostics",
         "system.execution_history",
         "system.health",
         "system.ping",

@@ -14,6 +14,9 @@ class PlanRiskPolicy:
         {
             "smart_home.list_devices",
             "smart_home.status",
+            "system.execution_detail",
+            "system.execution_diagnostics",
+            "system.execution_history",
             "system.health",
             "system.ping",
             "system.version",
