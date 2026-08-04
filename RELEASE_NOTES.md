@@ -1,26 +1,25 @@
-# JarvisAI v0.4.0-alpha.49 — Sprint 3.7 Pack G
+# JarvisAI v0.4.0-alpha.55 — Sprint 3.8 Pack F
 
-Sprint 3.7 final end-to-end and regression gate.
+Sprint 3.8 final end-to-end and regression gate.
 
 This pack adds no new production behavior.
 
-It validates the complete read-only execution analytics stack:
+It validates the complete advisory execution-anomaly stack:
 
-- execution statistics
-- capability reliability
-- execution health classification
-- execution health trends
-- system analytics capabilities
-- native read-only analytics tool exposure
+- anomaly detection
+- deterministic triage
+- safe operator advice
+- `system.execution_anomalies`
+- native `system_execution_anomalies` tool exposure
 - preserved smart-home side-effect safety
 
 ## Safety
 
-The final live gate is read-only.
+The final live gate is read-only and advisory.
 
-It does not replay plans, change planner routing, modify retry behavior,
-or control smart-home devices.
+It does not retry, replay, disable capabilities, change routing, change
+timeouts, perform rollback, or control smart-home devices.
 
 ## Goal
 
-If Pack G passes, Sprint 3.7 is complete and ready for a Git checkpoint.
+If Pack F passes, Sprint 3.8 is complete and ready for a Git checkpoint.

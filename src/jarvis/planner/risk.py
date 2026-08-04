@@ -15,6 +15,7 @@ class PlanRiskPolicy:
             "smart_home.list_devices",
             "smart_home.status",
             "system.capability_reliability",
+            "system.execution_anomalies",
             "system.execution_detail",
             "system.execution_diagnostics",
             "system.execution_health",

@@ -1,6 +1,6 @@
-# Sprint 3.7 Pack G — Final Gate
+# Sprint 3.8 Pack F — Final Gate
 
-Prerequisite: Sprint 3.7 Packs A-F PASS.
+Prerequisite: Sprint 3.8 Packs A-E PASS.
 
 Copy this pack into the JarvisAI project root.
 
@@ -9,7 +9,7 @@ No production file is replaced.
 Run:
 
 ```powershell
-python tools/run_sprint_3_7_gate.py
+python tools/run_sprint_3_8_gate.py
 ```
 
 Or manually:
@@ -23,34 +23,32 @@ pytest
 Then run:
 
 ```powershell
-python tools/test_sprint_3_7_e2e_live.py
+python tools/test_sprint_3_8_e2e_live.py
 ```
 
 Expected ending:
 
 ```text
-Sprint 3.7 End-to-End Execution Analytics Gate
+Sprint 3.8 End-to-End Execution Anomaly Gate
 ============================================================
 
-[Gate 1] system.execution_statistics
+[Gate 1] Anomaly capability
 Available: True
 
-[Gate 2] system.capability_reliability
-Available: True
+[Gate 2] Triage
+Summary: Execution anomaly triage: ...
 
-[Gate 3] system.execution_health
-Available: True
+[Gate 3] Advice
+Summary: Execution anomaly advice: ...
 
-[Gate 4] system.execution_health_trend
-Available: True
-
-[Gate 5] Native read-only tool surface
-Analytics tools present: True
+[Gate 4] Native read-only tool surface
+system_execution_anomalies: True
 Forbidden side-effect tools exposed: []
 
-Sprint 3.7 end-to-end gate: PASS
+Sprint 3.8 end-to-end gate: PASS
 ```
 
-Zero-valued analytics are valid when execution history is empty.
+When execution history is empty, the informational
+`no_execution_history` anomaly is valid.
 
-The final gate is read-only.
+The final gate is advisory/read-only.
