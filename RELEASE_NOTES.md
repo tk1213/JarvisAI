@@ -1,25 +1,20 @@
-# JarvisAI v0.3.8 — Sprint 2.5 Pack H
+# JarvisAI v0.4.0-alpha.12 — Sprint 3.2 Pack F
 
-Adds persistent observability and audit history for Long-Term Memory.
+Sprint 3.2 End-to-End Coordination and Regression Gate.
 
-## Audited actions
-- created
-- updated
-- unchanged
-- deleted
-- rejected
+This pack intentionally adds no new production behavior.
 
-## Stored audit metadata
-- memory key
-- memory value
-- source
-- reason
-- UTC timestamp
+It locks and verifies the architecture introduced across Sprint 3.2:
 
-## Storage
-Audit events are persisted in SQLite table `memory_audit`.
-The table and indexes are created lazily and idempotently on first use.
+- CapabilityRegistry remains the authoritative permission boundary
+- OpenAI tool names are adapter-safe underscore names
+- Jarvis internal capability names remain dot-separated
+- native tool calling exposes read-only capabilities only
+- state-changing native tool execution is blocked again at execution time
+- Planner requires confirmation for any plan containing a side effect
+- unknown future actions fail closed
+- mixed plans are held pending before any execution
+- pending plans can be cancelled without side effects
 
-## Compatibility
-MemoryService and MemoryCaptureService remain backward compatible because
-the audit dependency is optional.
+The live test uses the real runtime container and real configured AI model.
+The Planner side-effect test is cancelled before execution.

@@ -4,6 +4,7 @@ from typing import Any
 
 from jarvis.core.event_bus import event_bus
 from jarvis.core.events import Event
+from jarvis.planner.conversation_bridge import PlannerConversationBridge
 from jarvis.services.ai_capability_resolver import AICapabilityResolver
 from jarvis.services.ai_service import AIService
 from jarvis.services.capability_router import CapabilityRouter
@@ -18,6 +19,9 @@ from jarvis.smart_home.pending_action import (
 from jarvis.smart_home.resolution import DeviceResolutionStatus
 from jarvis.smart_home.resolver import DeviceResolver
 from jarvis.smart_home.service import SmartHomeService
+from jarvis.tools.conversation_bridge import (
+    ToolCallingConversationBridge,
+)
 
 
 class ConversationManager:
@@ -36,6 +40,8 @@ class ConversationManager:
         self._smart_home = smart_home
         self._capability_router = capability_router
         self._capability_resolver = capability_resolver
+        self._planner_bridge: PlannerConversationBridge | None = None
+        self._tool_calling_bridge: ToolCallingConversationBridge | None = None
 
         self._device_resolver = (
             DeviceResolver(smart_home)
@@ -46,6 +52,18 @@ class ConversationManager:
         self._pending_smart_home = (
             PendingSmartHomeActionStore()
         )
+
+    def set_planner_bridge(
+        self,
+        planner_bridge: PlannerConversationBridge,
+    ) -> None:
+        self._planner_bridge = planner_bridge
+
+    def set_tool_calling_bridge(
+        self,
+        tool_calling_bridge: ToolCallingConversationBridge,
+    ) -> None:
+        self._tool_calling_bridge = tool_calling_bridge
 
     def set_capability_router(
         self,
@@ -79,6 +97,21 @@ class ConversationManager:
 
         if not text:
             return ""
+
+        if (
+            self._planner_bridge is not None
+            and self._planner_bridge.has_pending_plan
+        ):
+            planner_reply = await self._planner_bridge.handle_pending(
+                text
+            )
+            if planner_reply.handled:
+                await self._save_conversation(
+                    user_text=text,
+                    reply=planner_reply.reply,
+                    tool="planner",
+                )
+                return planner_reply.reply
 
         if self._pending_smart_home.has_pending:
             reply = await self._handle_pending_smart_home(
@@ -173,6 +206,13 @@ class ConversationManager:
         self,
         text: str,
     ) -> str:
+        if self._planner_bridge is not None:
+            planner_reply = await self._planner_bridge.handle_ai_request(
+                text
+            )
+            if planner_reply.handled:
+                return planner_reply.reply
+
         if (
             self._capability_resolver is not None
             and self._capability_router is not None
@@ -214,10 +254,16 @@ class ConversationManager:
 
         history = await self._memory.get_ai_history()
 
-        reply = await self._ai.ask(
-            text=text,
-            history=history,
-        )
+        if self._tool_calling_bridge is not None:
+            reply = await self._tool_calling_bridge.ask(
+                text=text,
+                history=history,
+            )
+        else:
+            reply = await self._ai.ask(
+                text=text,
+                history=history,
+            )
 
         await event_bus.publish(
             Event(

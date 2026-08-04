@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from jarvis.ai.openai_client import OpenAIClient
 from jarvis.config import settings
 from jarvis.core.container import container
 from jarvis.core.event_bus import event_bus
@@ -11,6 +12,11 @@ from jarvis.core.plugin_loader import load_plugins
 from jarvis.core.service_factory import ServiceFactory
 from jarvis.core.task_manager import task_manager
 from jarvis.database.db import DatabaseManager
+from jarvis.planner.ai_generator import AIPlanGenerator
+from jarvis.planner.conversation_bridge import PlannerConversationBridge
+from jarvis.planner.executor import PlanExecutor
+from jarvis.planner.orchestrator import PlannerOrchestrator
+from jarvis.planner.service import PlannerService
 from jarvis.services.ai_capability_resolver import AICapabilityResolver
 from jarvis.services.ai_service import AIService
 from jarvis.services.capability_registry import CapabilityRegistry
@@ -25,6 +31,14 @@ from jarvis.skills.context import SkillContext
 from jarvis.skills.loader import SkillLoader
 from jarvis.skills.manager import SkillManager
 from jarvis.smart_home.service import SmartHomeService
+from jarvis.tools.conversation_bridge import (
+    ToolCallingConversationBridge,
+)
+from jarvis.tools.openai_runner import OpenAIToolCallingRunner
+from jarvis.tools.safe import (
+    ReadOnlyToolDefinitionFactory,
+    ReadOnlyToolExecutor,
+)
 
 
 class JarvisApplication:
@@ -125,6 +139,68 @@ class JarvisApplication:
                 registry=capability_registry,
             )
 
+            planner = PlannerService(
+                capability_registry
+            )
+
+            plan_executor = PlanExecutor(
+                capability_router
+            )
+
+            ai_plan_generator = AIPlanGenerator(
+                ai=ai_service,
+                registry=capability_registry,
+                planner=planner,
+            )
+
+            planner_orchestrator = PlannerOrchestrator(
+                generator=ai_plan_generator,
+                planner=planner,
+                executor=plan_executor,
+            )
+
+            planner_conversation = PlannerConversationBridge(
+                planner_orchestrator
+            )
+
+            conversation_manager.set_planner_bridge(
+                planner_conversation
+            )
+
+            if not isinstance(
+                ai_service.client,
+                OpenAIClient,
+            ):
+                raise TypeError(
+                    "Native tool calling requires OpenAIClient."
+                )
+
+            tool_definitions = ReadOnlyToolDefinitionFactory(
+                capability_registry
+            )
+
+            tool_executor = ReadOnlyToolExecutor(
+                registry=capability_registry,
+                router=capability_router,
+            )
+
+            openai_tool_runner = OpenAIToolCallingRunner(
+                ai=ai_service.client,
+                definitions=tool_definitions,
+                executor=tool_executor,
+            )
+
+            tool_calling_conversation = (
+                ToolCallingConversationBridge(
+                    runner=openai_tool_runner,
+                    fallback_ai=ai_service,
+                )
+            )
+
+            conversation_manager.set_tool_calling_bridge(
+                tool_calling_conversation
+            )
+
             conversation_manager.set_capability_router(
                 capability_router,
             )
@@ -154,6 +230,60 @@ class JarvisApplication:
             container.register(
                 "ai_capability_resolver",
                 ai_capability_resolver,
+                overwrite=False,
+            )
+
+            container.register(
+                "planner",
+                planner,
+                overwrite=False,
+            )
+
+            container.register(
+                "plan_executor",
+                plan_executor,
+                overwrite=False,
+            )
+
+            container.register(
+                "ai_plan_generator",
+                ai_plan_generator,
+                overwrite=False,
+            )
+
+            container.register(
+                "planner_orchestrator",
+                planner_orchestrator,
+                overwrite=False,
+            )
+
+            container.register(
+                "planner_conversation",
+                planner_conversation,
+                overwrite=False,
+            )
+
+            container.register(
+                "tool_definitions",
+                tool_definitions,
+                overwrite=False,
+            )
+
+            container.register(
+                "tool_executor",
+                tool_executor,
+                overwrite=False,
+            )
+
+            container.register(
+                "openai_tool_runner",
+                openai_tool_runner,
+                overwrite=False,
+            )
+
+            container.register(
+                "tool_calling_conversation",
+                tool_calling_conversation,
                 overwrite=False,
             )
 

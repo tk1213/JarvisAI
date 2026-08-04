@@ -1,44 +1,61 @@
-# Sprint 2.5 Pack H
+# Sprint 3.2 Pack F — Final Gate
 
-Prerequisite: Pack G passing.
+Prerequisite: Sprint 3.2 Packs A-E PASS.
 
-Copy Pack H into the JarvisAI project root.
+Copy the pack into the JarvisAI project root.
 
-Apply DI integration:
+There is no patch script and no production source replacement in this pack.
+
+Run the static gate:
 
 ```powershell
-python scripts/apply_sprint_2_5_pack_h.py
+python tools/run_sprint_3_2_gate.py
 ```
 
-Quality Gate:
+Or run manually:
 
 ```powershell
-python -m py_compile src/jarvis/memory/audit.py
-python -m py_compile src/jarvis/memory/audit_repository.py
-python -m py_compile src/jarvis/memory/audit_service.py
-python -m py_compile src/jarvis/memory/service.py
-python -m py_compile src/jarvis/memory/capture.py
-python -m py_compile src/jarvis/core/service_factory.py
+python -m compileall -q src tests tools
 ruff check src tests tools
 pytest
 ```
 
-Runtime:
+Then run the real runtime coordination gate:
 
 ```powershell
-python tools/test_memory_audit_live.py
+python tools/test_sprint_3_2_e2e_live.py
 ```
 
-Expected audit output should contain at least:
+Expected final output:
 
 ```text
-created   audit_test_key
-deleted   audit_test_key
+Forbidden native side effects: []
+...
+Requires confirmation: True
+Pending plan cancelled: True
+
+Sprint 3.2 coordination gate: PASS
 ```
 
-Then verify existing memory behavior:
+The live Planner test deliberately cancels the side-effect plan.
+It does not turn off the device.
+
+Finally run:
 
 ```powershell
-python tools/test_memory_retrieval_live.py
 jarvis chat
 ```
+
+Regression checks:
+
+```text
+Hello Jarvis
+What is my name?
+Check whether JarvisAI is running
+Turn off Smart Plug 1 and check its status
+```
+
+The last request must require confirmation before execution.
+
+If all gates pass, Sprint 3.2 is ready for a Git checkpoint before
+Sprint 3.3 Multi-step Execution.
