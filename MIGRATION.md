@@ -1,54 +1,37 @@
-# Sprint 3.8 Pack F — Final Gate
+# Sprint 4.0 Pack F — AI Agent Runtime
 
-Prerequisite: Sprint 3.8 Packs A-E PASS.
+Prerequisite: Sprint 4.0 Packs A-E PASS.
 
-Copy this pack into the JarvisAI project root.
+This pack is additive. It does not replace `application.py`,
+`PlannerOrchestrator`, `AIPlanGenerator`, or `PlanExecutor`.
 
-No production file is replaced.
+Copy all files into the JarvisAI project root.
 
 Run:
 
 ```powershell
-python tools/run_sprint_3_8_gate.py
-```
-
-Or manually:
-
-```powershell
-python -m compileall -q src tests tools
-ruff check src tests tools
-pytest
+python tools/run_sprint_4_0_gate.py
 ```
 
 Then run:
 
 ```powershell
-python tools/test_sprint_3_8_e2e_live.py
+python tools/test_ai_agent_runtime_live.py
 ```
 
 Expected ending:
 
 ```text
-Sprint 3.8 End-to-End Execution Anomaly Gate
-============================================================
-
-[Gate 1] Anomaly capability
-Available: True
-
-[Gate 2] Triage
-Summary: Execution anomaly triage: ...
-
-[Gate 3] Advice
-Summary: Execution anomaly advice: ...
-
-[Gate 4] Native read-only tool surface
-system_execution_anomalies: True
-Forbidden side-effect tools exposed: []
-
-Sprint 3.8 end-to-end gate: PASS
+Sprint 4.0 AI Agent Runtime
+------------------------------------------------------------
+AI agent run: status=completed, success=True, requires_confirmation=False.
+Plan: ...
+Execution: status=completed, completed_steps=...
+Reflection: decision=complete
+Memory: ...
+AI agent runtime gate: PASS
 ```
 
-When execution history is empty, the informational
-`no_execution_history` anomaly is valid.
+The live test uses read-only system capabilities.
 
-The final gate is advisory/read-only.
+Side-effect plans remain behind the existing confirmation flow.

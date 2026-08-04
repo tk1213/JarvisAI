@@ -1,25 +1,39 @@
-# JarvisAI v0.4.0-alpha.55 — Sprint 3.8 Pack F
+# JarvisAI v0.5.0-alpha.6 — Sprint 4.0 Pack F
 
-Sprint 3.8 final end-to-end and regression gate.
+Completes Sprint 4.0 with an AI agent runtime layer that reuses the actual
+JarvisAI planning architecture.
 
-This pack adds no new production behavior.
+## Added
 
-It validates the complete advisory execution-anomaly stack:
+- `AIAgentRunStatus`
+- `AIAgentRunResult`
+- `AIAgentRuntime`
+- `AIAgentRunReport`
+- `AIAgentRunReportBuilder`
 
-- anomaly detection
-- deterministic triage
-- safe operator advice
-- `system.execution_anomalies`
-- native `system_execution_anomalies` tool exposure
-- preserved smart-home side-effect safety
+## Reused production services
+
+- `AIPlanGenerator`
+- `PlannerOrchestrator`
+- `PlannerService`
+- `PersistingPlanExecutor`
+- `ExecutionPersistenceService`
+- `AIPlanReflectionService`
+- `AIPlanMemoryStore`
+
+## Runtime behavior
+
+The agent runtime:
+
+1. asks the existing orchestrator to prepare a plan
+2. stops safely when confirmation is required
+3. executes read-only plans immediately
+4. reflects on the execution result
+5. records bounded in-memory experience
 
 ## Safety
 
-The final live gate is read-only and advisory.
+Side-effect plans remain governed by the existing `ExecutionPolicy` and
+pending-confirmation path.
 
-It does not retry, replay, disable capabilities, change routing, change
-timeouts, perform rollback, or control smart-home devices.
-
-## Goal
-
-If Pack F passes, Sprint 3.8 is complete and ready for a Git checkpoint.
+The runtime never bypasses confirmation.
