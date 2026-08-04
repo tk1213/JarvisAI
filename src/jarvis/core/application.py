@@ -14,8 +14,19 @@ from jarvis.core.task_manager import task_manager
 from jarvis.database.db import DatabaseManager
 from jarvis.planner.ai_generator import AIPlanGenerator
 from jarvis.planner.conversation_bridge import PlannerConversationBridge
-from jarvis.planner.executor import PlanExecutor
+from jarvis.planner.execution_persistence import (
+    ExecutionPersistenceService,
+)
+from jarvis.planner.execution_repository import (
+    PlanExecutionRepository,
+)
 from jarvis.planner.orchestrator import PlannerOrchestrator
+from jarvis.planner.persisting_executor import (
+    PersistingPlanExecutor,
+)
+from jarvis.planner.resilience_runtime import (
+    resilience_runtime,
+)
 from jarvis.planner.service import PlannerService
 from jarvis.services.ai_capability_resolver import AICapabilityResolver
 from jarvis.services.ai_service import AIService
@@ -143,8 +154,17 @@ class JarvisApplication:
                 capability_registry
             )
 
-            plan_executor = PlanExecutor(
-                capability_router
+            execution_repository = PlanExecutionRepository(
+                database
+            )
+
+            execution_persistence = ExecutionPersistenceService(
+                execution_repository
+            )
+
+            plan_executor = PersistingPlanExecutor(
+                capability_router,
+                persistence=execution_persistence,
             )
 
             ai_plan_generator = AIPlanGenerator(
@@ -246,6 +266,18 @@ class JarvisApplication:
             )
 
             container.register(
+                "execution_repository",
+                execution_repository,
+                overwrite=False,
+            )
+
+            container.register(
+                "execution_persistence",
+                execution_persistence,
+                overwrite=False,
+            )
+
+            container.register(
                 "ai_plan_generator",
                 ai_plan_generator,
                 overwrite=False,
@@ -254,6 +286,12 @@ class JarvisApplication:
             container.register(
                 "planner_orchestrator",
                 planner_orchestrator,
+                overwrite=False,
+            )
+
+            container.register(
+                "resilience_runtime",
+                resilience_runtime,
                 overwrite=False,
             )
 

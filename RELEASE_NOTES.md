@@ -1,20 +1,28 @@
-# JarvisAI v0.4.0-alpha.12 — Sprint 3.2 Pack F
+# JarvisAI v0.4.0-alpha.36 — Sprint 3.5 Pack H
 
-Sprint 3.2 End-to-End Coordination and Regression Gate.
+Sprint 3.5 final end-to-end and regression gate.
 
-This pack intentionally adds no new production behavior.
+This pack adds no new production behavior.
 
-It locks and verifies the architecture introduced across Sprint 3.2:
+It validates the complete durable execution-history stack:
 
-- CapabilityRegistry remains the authoritative permission boundary
-- OpenAI tool names are adapter-safe underscore names
-- Jarvis internal capability names remain dot-separated
-- native tool calling exposes read-only capabilities only
-- state-changing native tool execution is blocked again at execution time
-- Planner requires confirmation for any plan containing a side effect
-- unknown future actions fail closed
-- mixed plans are held pending before any execution
-- pending plans can be cancelled without side effects
+- execution record DTO
+- JSON serialization
+- SQLAlchemy/SQLite repository
+- persistence service
+- automatic runtime persistence
+- execution history query service
+- execution history reporting
+- `system.execution_history` read-only capability
+- native tool mapping to `system_execution_history`
 
-The live test uses the real runtime container and real configured AI model.
-The Planner side-effect test is cancelled before execution.
+## Safety
+
+The final live gate is read-only.
+
+It reads persisted execution history and verifies capability/tool exposure.
+It does not create a new plan and does not control smart-home devices.
+
+## Goal
+
+If Pack H passes, Sprint 3.5 is complete and ready for a Git checkpoint.

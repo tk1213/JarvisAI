@@ -1,18 +1,18 @@
-# Sprint 3.2 Pack F — Final Gate
+# Sprint 3.5 Pack H — Final Gate
 
-Prerequisite: Sprint 3.2 Packs A-E PASS.
+Prerequisite: Sprint 3.5 Packs A-G PASS.
 
-Copy the pack into the JarvisAI project root.
+Copy this pack into the JarvisAI project root.
 
-There is no patch script and no production source replacement in this pack.
+No production file is replaced.
 
-Run the static gate:
+Run:
 
 ```powershell
-python tools/run_sprint_3_2_gate.py
+python tools/run_sprint_3_5_gate.py
 ```
 
-Or run manually:
+Or manually:
 
 ```powershell
 python -m compileall -q src tests tools
@@ -20,42 +20,31 @@ ruff check src tests tools
 pytest
 ```
 
-Then run the real runtime coordination gate:
+Then run:
 
 ```powershell
-python tools/test_sprint_3_2_e2e_live.py
+python tools/test_sprint_3_5_e2e_live.py
 ```
 
-Expected final output:
+Expected ending:
 
 ```text
-Forbidden native side effects: []
-...
-Requires confirmation: True
-Pending plan cancelled: True
+Sprint 3.5 End-to-End Persistence Gate
+============================================================
 
-Sprint 3.2 coordination gate: PASS
+[Gate 1] Persistent execution history
+Execution history: ...
+
+[Gate 2] Native tool surface
+system_execution_history present: True
+
+[Gate 3] Runtime capability read
+Available: True
+Summary: Execution history: ...
+
+Sprint 3.5 end-to-end gate: PASS
 ```
 
-The live Planner test deliberately cancels the side-effect plan.
-It does not turn off the device.
+The live gate is read-only and does not control smart-home devices.
 
-Finally run:
-
-```powershell
-jarvis chat
-```
-
-Regression checks:
-
-```text
-Hello Jarvis
-What is my name?
-Check whether JarvisAI is running
-Turn off Smart Plug 1 and check its status
-```
-
-The last request must require confirmation before execution.
-
-If all gates pass, Sprint 3.2 is ready for a Git checkpoint before
-Sprint 3.3 Multi-step Execution.
+After both gates pass, Sprint 3.5 can be checkpointed in Git.
