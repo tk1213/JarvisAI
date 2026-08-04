@@ -3,6 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 from jarvis.core.container import container
+from jarvis.planner.capability_reliability import (
+    CapabilityReliabilityService,
+)
+from jarvis.planner.capability_reliability_report import (
+    CapabilityReliabilityReportBuilder,
+)
 from jarvis.planner.execution_detail import ExecutionDetailService
 from jarvis.planner.execution_detail_report import (
     ExecutionDetailReportBuilder,
@@ -13,12 +19,28 @@ from jarvis.planner.execution_diagnostics import (
 from jarvis.planner.execution_diagnostics_report import (
     ExecutionDiagnosticsReportBuilder,
 )
+from jarvis.planner.execution_health import ExecutionHealthService
+from jarvis.planner.execution_health_report import (
+    ExecutionHealthReportBuilder,
+)
+from jarvis.planner.execution_health_trend_report import (
+    ExecutionHealthTrendReportBuilder,
+)
+from jarvis.planner.execution_health_trends import (
+    ExecutionHealthTrendService,
+)
 from jarvis.planner.execution_history import ExecutionHistoryService
 from jarvis.planner.execution_history_report import (
     ExecutionHistoryReportBuilder,
 )
 from jarvis.planner.execution_persistence import (
     ExecutionPersistenceService,
+)
+from jarvis.planner.execution_statistics import (
+    ExecutionStatisticsService,
+)
+from jarvis.planner.execution_statistics_report import (
+    ExecutionStatisticsReportBuilder,
 )
 from jarvis.services.capability import CapabilityDefinition
 from jarvis.skills.base import Skill
@@ -29,6 +51,8 @@ from jarvis.version import __version__
 
 class SystemSkill(Skill):
     _EXECUTION_HISTORY_LIMIT = 10
+    _EXECUTION_OBSERVABILITY_LIMIT = 100
+    _EXECUTION_TREND_WINDOW_SIZE = 20
 
     def __init__(
         self,
@@ -41,7 +65,7 @@ class SystemSkill(Skill):
     def metadata(self) -> SkillMetadata:
         return SkillMetadata(
             name="system",
-            version="1.2.0",
+            version="1.3.0",
             description="Built-in system utilities",
             capabilities=[
                 "system.ping",
@@ -50,6 +74,10 @@ class SystemSkill(Skill):
                 "system.execution_history",
                 "system.execution_detail",
                 "system.execution_diagnostics",
+                "system.execution_statistics",
+                "system.capability_reliability",
+                "system.execution_health",
+                "system.execution_health_trend",
             ],
             priority=1,
         )
@@ -109,6 +137,34 @@ class SystemSkill(Skill):
                 ),
                 arguments=record_id_argument,
             ),
+            CapabilityDefinition(
+                name="system.execution_statistics",
+                description=(
+                    "Summarize recent planner execution "
+                    "statistics. Read-only."
+                ),
+            ),
+            CapabilityDefinition(
+                name="system.capability_reliability",
+                description=(
+                    "Summarize recent reliability metrics "
+                    "for planner capabilities. Read-only."
+                ),
+            ),
+            CapabilityDefinition(
+                name="system.execution_health",
+                description=(
+                    "Show advisory execution health based on "
+                    "recent persisted planner history. Read-only."
+                ),
+            ),
+            CapabilityDefinition(
+                name="system.execution_health_trend",
+                description=(
+                    "Show the recent execution health trend "
+                    "using persisted planner history. Read-only."
+                ),
+            ),
         ]
 
     async def startup(self) -> None:
@@ -151,6 +207,18 @@ class SystemSkill(Skill):
                     kwargs
                 )
             )
+
+        if command == "system.execution_statistics":
+            return await self._execution_statistics()
+
+        if command == "system.capability_reliability":
+            return await self._capability_reliability()
+
+        if command == "system.execution_health":
+            return await self._execution_health()
+
+        if command == "system.execution_health_trend":
+            return await self._execution_health_trend()
 
         raise ValueError(
             f"Unsupported command: {command}"
@@ -313,6 +381,163 @@ class SystemSkill(Skill):
             "timeout_steps": list(
                 diagnostics.timeout_steps
             ),
+        }
+
+    async def _execution_statistics(
+        self,
+    ) -> dict[str, Any]:
+        persistence = self._resolve_persistence()
+
+        if persistence is None:
+            return self._unavailable_summary(
+                "Execution statistics are not available."
+            )
+
+        service = ExecutionStatisticsService(
+            persistence
+        )
+        statistics = await service.summarize(
+            limit=self._EXECUTION_OBSERVABILITY_LIMIT
+        )
+        report = ExecutionStatisticsReportBuilder().build(
+            statistics
+        )
+
+        return {
+            "available": True,
+            "summary": report.summary,
+            "lines": list(
+                report.lines
+            ),
+            "total": statistics.total,
+            "completed": statistics.completed,
+            "failed": statistics.failed,
+            "success_rate": statistics.success_rate,
+            "retried_steps": statistics.retried_steps,
+            "timed_out_steps": statistics.timed_out_steps,
+        }
+
+    async def _capability_reliability(
+        self,
+    ) -> dict[str, Any]:
+        persistence = self._resolve_persistence()
+
+        if persistence is None:
+            return self._unavailable_summary(
+                "Capability reliability is not available."
+            )
+
+        service = CapabilityReliabilityService(
+            persistence
+        )
+        reliability = await service.summarize(
+            limit=self._EXECUTION_OBSERVABILITY_LIMIT
+        )
+        report = CapabilityReliabilityReportBuilder().build(
+            reliability
+        )
+
+        return {
+            "available": True,
+            "summary": report.summary,
+            "lines": list(
+                report.lines
+            ),
+            "total_capabilities": (
+                reliability.total_capabilities
+            ),
+        }
+
+    async def _execution_health(
+        self,
+    ) -> dict[str, Any]:
+        persistence = self._resolve_persistence()
+
+        if persistence is None:
+            return self._unavailable_summary(
+                "Execution health is not available."
+            )
+
+        statistics = ExecutionStatisticsService(
+            persistence
+        )
+        reliability = CapabilityReliabilityService(
+            persistence
+        )
+        health_service = ExecutionHealthService(
+            statistics,
+            reliability,
+        )
+
+        snapshot = await health_service.check(
+            limit=self._EXECUTION_OBSERVABILITY_LIMIT
+        )
+        report = ExecutionHealthReportBuilder().build(
+            snapshot
+        )
+
+        return {
+            "available": True,
+            "summary": report.summary,
+            "lines": list(
+                report.lines
+            ),
+            "level": snapshot.level.value,
+            "total_executions": snapshot.total_executions,
+            "success_rate": snapshot.success_rate,
+            "retried_steps": snapshot.retried_steps,
+            "timed_out_steps": snapshot.timed_out_steps,
+            "unreliable_capabilities": list(
+                snapshot.unreliable_capabilities
+            ),
+        }
+
+    async def _execution_health_trend(
+        self,
+    ) -> dict[str, Any]:
+        persistence = self._resolve_persistence()
+
+        if persistence is None:
+            return self._unavailable_summary(
+                "Execution health trend is not available."
+            )
+
+        service = ExecutionHealthTrendService(
+            persistence
+        )
+        trend = await service.summarize(
+            window_size=self._EXECUTION_TREND_WINDOW_SIZE
+        )
+        report = ExecutionHealthTrendReportBuilder().build(
+            trend
+        )
+
+        return {
+            "available": True,
+            "summary": report.summary,
+            "lines": list(
+                report.lines
+            ),
+            "direction": trend.direction,
+            "level": trend.level.value,
+            "current_size": trend.current.size,
+            "previous_size": trend.previous.size,
+            "current_success_rate": (
+                trend.current.success_rate
+            ),
+            "previous_success_rate": (
+                trend.previous.success_rate
+            ),
+        }
+
+    @staticmethod
+    def _unavailable_summary(
+        message: str,
+    ) -> dict[str, Any]:
+        return {
+            "available": False,
+            "summary": message,
+            "lines": [],
         }
 
     @staticmethod

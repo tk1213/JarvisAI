@@ -1,6 +1,6 @@
-# Sprint 3.6 Pack F — Final Gate
+# Sprint 3.7 Pack G — Final Gate
 
-Prerequisite: Sprint 3.6 Packs A-E and Pack E Hotfix 1 PASS.
+Prerequisite: Sprint 3.7 Packs A-F PASS.
 
 Copy this pack into the JarvisAI project root.
 
@@ -9,7 +9,7 @@ No production file is replaced.
 Run:
 
 ```powershell
-python tools/run_sprint_3_6_gate.py
+python tools/run_sprint_3_7_gate.py
 ```
 
 Or manually:
@@ -23,31 +23,34 @@ pytest
 Then run:
 
 ```powershell
-python tools/test_sprint_3_6_e2e_live.py
+python tools/test_sprint_3_7_e2e_live.py
 ```
 
-Expected ending with persisted history:
+Expected ending:
 
 ```text
-Sprint 3.6 End-to-End Observability Gate
+Sprint 3.7 End-to-End Execution Analytics Gate
 ============================================================
 
-[Gate 1] Execution query
-Records visible: ...
+[Gate 1] system.execution_statistics
+Available: True
 
-[Gate 2] Execution detail
-Available: ...
+[Gate 2] system.capability_reliability
+Available: True
 
-[Gate 3] Execution diagnostics
-Available: ...
+[Gate 3] system.execution_health
+Available: True
 
-Sprint 3.6 end-to-end gate: PASS
+[Gate 4] system.execution_health_trend
+Available: True
+
+[Gate 5] Native read-only tool surface
+Analytics tools present: True
+Forbidden side-effect tools exposed: []
+
+Sprint 3.7 end-to-end gate: PASS
 ```
 
-If no persisted history exists:
-
-```text
-Sprint 3.6 end-to-end gate: PASS (no-data path)
-```
+Zero-valued analytics are valid when execution history is empty.
 
 The final gate is read-only.
