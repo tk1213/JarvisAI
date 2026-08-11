@@ -4,13 +4,16 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Virtual Environment
+# Virtual environments
 .venv/
+.venv-*/
 venv/
 env/
 
-# Environment variables
+# Environment / secrets
 .env
+.env.*
+!.env.example
 
 # IDE
 .vscode/
@@ -18,12 +21,41 @@ env/
 
 # Test / Coverage
 .pytest_cache/
+.ruff_cache/
 .coverage
+.coverage.*
 htmlcov/
 
 # Logs
 *.log
 
+# Build / package metadata
+build/
+dist/
+*.egg-info/
+
+# Runtime database
+/jarvis.db
+/data/jarvis.db
+/jarvis.db-shm
+/jarvis.db-wal
+/jarvis.db-journal
+
+# Generated audio
+/*.wav
+/tmp/audio/
+
+# Temporary runtime data
+/tmp/
+
+# Archives / debug artifacts
+*.zip
+
 # OS
 .DS_Store
 Thumbs.db
+
+# Pre-stage safety snapshots
+/pre_sprint6_stage_status.txt
+/pre_sprint6_stage_worktree.diff
+/pre_sprint6_stage_index.diff

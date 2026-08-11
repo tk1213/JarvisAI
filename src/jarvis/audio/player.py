@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import numpy as np
@@ -9,15 +10,26 @@ from jarvis.audio.manager import AudioManager
 
 
 class AudioPlayer:
-    def __init__(self) -> None:
-        self.audio = AudioManager()
+    def __init__(
+        self,
+        audio: AudioManager | None = None,
+    ) -> None:
+        self.audio = (
+            audio
+            if audio is not None
+            else AudioManager()
+        )
 
     def play(
         self,
         filename: str | Path,
         blocking: bool = True,
+        *,
+        on_playback_start: Callable[[], None] | None = None,
     ) -> None:
-        audio_path = Path(filename).resolve()
+        audio_path = Path(
+            filename
+        ).resolve()
 
         if not audio_path.exists():
             raise FileNotFoundError(
@@ -42,18 +54,24 @@ class AudioPlayer:
         if source_rate != target_rate:
             data = self._resample(
                 data=data,
-                source_rate=int(source_rate),
+                source_rate=int(
+                    source_rate
+                ),
                 target_rate=target_rate,
             )
 
         channels = (
             1
             if data.ndim == 1
-            else int(data.shape[1])
+            else int(
+                data.shape[1]
+            )
         )
 
         max_channels = int(
-            output_info["max_output_channels"]
+            output_info[
+                "max_output_channels"
+            ]
         )
 
         if channels > max_channels:
@@ -68,9 +86,15 @@ class AudioPlayer:
             f"[{self.audio.output_device}] "
             f"{output_info['name']}"
         )
-        print(f"Source rate   : {source_rate}")
-        print(f"Playback rate : {target_rate}")
-        print(f"Channels      : {channels}")
+        print(
+            f"Source rate   : {source_rate}"
+        )
+        print(
+            f"Playback rate : {target_rate}"
+        )
+        print(
+            f"Channels      : {channels}"
+        )
 
         sd.check_output_settings(
             device=self.audio.output_device,
@@ -79,6 +103,9 @@ class AudioPlayer:
             dtype="float32",
         )
 
+        if on_playback_start is not None:
+            on_playback_start()
+
         sd.play(
             data=data,
             samplerate=target_rate,
@@ -86,7 +113,9 @@ class AudioPlayer:
             blocking=blocking,
         )
 
-    def stop(self) -> None:
+    def stop(
+        self,
+    ) -> None:
         sd.stop()
 
     @staticmethod
@@ -100,8 +129,14 @@ class AudioPlayer:
             target_rate,
         )
 
-        up = target_rate // common_divisor
-        down = source_rate // common_divisor
+        up = (
+            target_rate
+            // common_divisor
+        )
+        down = (
+            source_rate
+            // common_divisor
+        )
 
         resampled = resample_poly(
             data,

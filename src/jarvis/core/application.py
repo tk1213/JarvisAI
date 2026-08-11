@@ -3,6 +3,10 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from typing import Any
 
+from jarvis.agent.bootstrap import register_ai_agent_runtime
+from jarvis.agent.conversation_bridge import AIAgentConversationBridge
+from jarvis.agent.memory_startup import AIAgentMemoryStartupService
+from jarvis.agent.planning_context import AIAgentPlanningContextBuilder
 from jarvis.ai.openai_client import OpenAIClient
 from jarvis.config import settings
 from jarvis.core.container import container
@@ -12,6 +16,8 @@ from jarvis.core.plugin_loader import load_plugins
 from jarvis.core.service_factory import ServiceFactory
 from jarvis.core.task_manager import task_manager
 from jarvis.database.db import DatabaseManager
+from jarvis.memory.context import MemoryContextBuilder
+from jarvis.memory.coordination import ConversationAgentMemoryCoordinator
 from jarvis.planner.ai_generator import AIPlanGenerator
 from jarvis.planner.conversation_bridge import PlannerConversationBridge
 from jarvis.planner.execution_persistence import (
@@ -289,6 +295,52 @@ class JarvisApplication:
                 overwrite=False,
             )
 
+            register_ai_agent_runtime(
+                container,
+                overwrite=False,
+            )
+
+            if (
+                container.has("memory_context")
+                and container.has("ai_agent_planning_context")
+            ):
+                memory_coordinator = ConversationAgentMemoryCoordinator(
+                    conversation_memory=container.resolve(
+                        "memory_context",
+                        MemoryContextBuilder,
+                    ),
+                    agent_memory=container.resolve(
+                        "ai_agent_planning_context",
+                        AIAgentPlanningContextBuilder,
+                    ),
+                )
+
+                container.register(
+                    "conversation_agent_memory_coordinator",
+                    memory_coordinator,
+                    overwrite=False,
+                )
+
+            ai_agent_runtime = container.get(
+                "ai_agent_runtime"
+            )
+
+            ai_agent_conversation = (
+                AIAgentConversationBridge(
+                    ai_agent_runtime
+                )
+            )
+
+            conversation_manager.set_ai_agent_bridge(
+                ai_agent_conversation
+            )
+
+            container.register(
+                "ai_agent_conversation",
+                ai_agent_conversation,
+                overwrite=False,
+            )
+
             container.register(
                 "resilience_runtime",
                 resilience_runtime,
@@ -330,6 +382,21 @@ class JarvisApplication:
 
             await database.startup()
             self._database_started = True
+
+            if container.has(
+                "ai_agent_memory_startup"
+            ):
+                agent_memory_startup = container.resolve(
+                    "ai_agent_memory_startup",
+                    AIAgentMemoryStartupService,
+                )
+
+                restored_records = await agent_memory_startup.restore()
+
+                log.info(
+                    "Restored {} durable agent memory record(s)",
+                    restored_records,
+                )
 
             await smart_home_service.connect()
             self._smart_home_connected = True

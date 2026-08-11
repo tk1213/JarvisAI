@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import time
 from dataclasses import dataclass
 from typing import Any
 
 from jarvis.ai.openai_client import OpenAIClient
+from jarvis.ai.responses_contracts import (
+    ResponsesFunctionCall,
+    ResponsesTurnResult,
+)
+from jarvis.ai.responses_service import ResponsesService
 from jarvis.core.logger import log
 from jarvis.core.prompt_manager import prompt_manager
 from jarvis.tools.contracts import ToolCall, ToolResult
@@ -27,21 +34,89 @@ class OpenAIToolCallingRunner:
         definitions: ToolDefinitionFactory,
         executor: ToolExecutor,
         max_rounds: int = 4,
+        responses_service: ResponsesService | None = None,
+        run_timeout_seconds: float = 30.0,
+        max_tool_calls_per_round: int = 8,
     ) -> None:
         if max_rounds < 1:
             raise ValueError(
                 "max_rounds must be at least 1."
             )
 
+        if run_timeout_seconds <= 0:
+            raise ValueError(
+                "run_timeout_seconds must be greater than 0."
+            )
+
+        if max_tool_calls_per_round < 1:
+            raise ValueError(
+                "max_tool_calls_per_round must be at least 1."
+            )
+
         self._ai = ai
         self._definitions = definitions
         self._executor = executor
         self._max_rounds = max_rounds
+        self._run_timeout_seconds = run_timeout_seconds
+        self._max_tool_calls_per_round = max_tool_calls_per_round
+
+        self._responses = (
+            responses_service
+            if responses_service is not None
+            else ResponsesService(
+                responses_api=ai.client.responses,
+                model=ai.model,
+            )
+        )
 
     async def run(
         self,
         message: str,
         history: list[dict[str, str]] | None = None,
+        *,
+        voice_mode: bool = False,
+    ) -> ToolCallingRunResult:
+        started_at = time.monotonic()
+
+        try:
+            async with asyncio.timeout(
+                self._run_timeout_seconds
+            ):
+                result = await self._run(
+                    message=message,
+                    history=history,
+                    voice_mode=voice_mode,
+                )
+        except TimeoutError as exc:
+            elapsed = time.monotonic() - started_at
+
+            log.warning(
+                "OpenAI tool-calling timed out after {:.3f}s",
+                elapsed,
+            )
+
+            raise RuntimeError(
+                "OpenAI tool-calling exceeded the run timeout."
+            ) from exc
+
+        elapsed = time.monotonic() - started_at
+
+        log.info(
+            "OpenAI tool-calling completed in {:.3f}s "
+            "after {} round(s) with {} tool result(s)",
+            elapsed,
+            result.rounds,
+            len(result.tool_results),
+        )
+
+        return result
+
+    async def _run(
+        self,
+        *,
+        message: str,
+        history: list[dict[str, str]] | None,
+        voice_mode: bool,
     ) -> ToolCallingRunResult:
         conversation = self._ai._build_conversation(
             message=message,
@@ -51,10 +126,17 @@ class OpenAIToolCallingRunner:
         tools = self._definitions.to_openai_tools()
 
         if not tools:
-            text = await self._ai.chat(
-                message=message,
-                history=history,
-            )
+            if voice_mode:
+                text = await self._ai.chat(
+                    message=message,
+                    history=history,
+                    voice_mode=True,
+                )
+            else:
+                text = await self._ai.chat(
+                    message=message,
+                    history=history,
+                )
 
             return ToolCallingRunResult(
                 text=text,
@@ -62,15 +144,19 @@ class OpenAIToolCallingRunner:
                 rounds=0,
             )
 
-        instructions = prompt_manager.load(
-            "system"
+        instructions = self._build_instructions(
+            voice_mode=voice_mode,
         )
 
-        response = await self._ai.client.responses.create(
-            model=self._ai.model,
+        response = await self._responses.create_turn(
+            input_items=conversation,
             instructions=instructions,
-            input=conversation,
             tools=tools,
+            verbosity=(
+                "low"
+                if voice_mode
+                else None
+            ),
         )
 
         results: list[ToolResult] = []
@@ -79,9 +165,7 @@ class OpenAIToolCallingRunner:
             1,
             self._max_rounds + 1,
         ):
-            function_calls = self._function_calls(
-                response
-            )
+            function_calls = response.function_calls
 
             if not function_calls:
                 return ToolCallingRunResult(
@@ -93,6 +177,10 @@ class OpenAIToolCallingRunner:
                     ),
                     rounds=round_number,
                 )
+
+            self._validate_function_call_count(
+                function_calls
+            )
 
             outputs: list[dict[str, Any]] = []
 
@@ -125,11 +213,10 @@ class OpenAIToolCallingRunner:
                 len(outputs),
             )
 
-            response = await self._ai.client.responses.create(
-                model=self._ai.model,
+            response = await self._responses.create_turn(
+                input_items=outputs,
                 instructions=instructions,
-                previous_response_id=response.id,
-                input=outputs,
+                previous_response_id=response.response_id,
                 tools=tools,
             )
 
@@ -137,64 +224,73 @@ class OpenAIToolCallingRunner:
             "OpenAI tool-calling exceeded maximum rounds."
         )
 
-    @staticmethod
-    def _function_calls(
-        response: Any,
-    ) -> list[Any]:
-        output = getattr(
-            response,
-            "output",
-            (),
+   
+    def _build_instructions(
+        self,
+        *,
+        voice_mode: bool,
+    ) -> str:
+        instructions = prompt_manager.load(
+            "system"
         )
 
-        return [
-            item
-            for item in output
-            if getattr(
-                item,
-                "type",
-                None,
+        if not voice_mode:
+            return instructions
+
+        voice_instructions = (
+            "\n\n"
+            "Voice response mode:\n"
+            "- This response will be spoken aloud.\n"
+            "- Default to ONE very short sentence.\n"
+            "- Give the answer immediately.\n"
+            "- For recommendations, give only ONE best recommendation.\n"
+            "- Do not explain why unless the user asks why.\n"
+            "- Do not add benefits, reasons, examples, or alternatives "
+            "unless requested.\n"
+            "- Do not repeat or paraphrase the user's message.\n"
+            "- Avoid filler and conversational padding.\n"
+            "- Do not use Markdown, headings, bullet lists, tables, or emojis.\n"
+            "- Use additional sentences only when necessary for correctness "
+            "or safety.\n"
+            "- If the user explicitly asks for details, steps, options, "
+            "or an explanation, provide the necessary detail.\n"
+            "- Never omit important safety information for brevity."
+        )
+
+        return instructions + voice_instructions
+
+    def _validate_function_call_count(
+        self,
+        function_calls: tuple[ResponsesFunctionCall, ...],
+    ) -> None:
+        if (
+            len(function_calls)
+            > self._max_tool_calls_per_round
+        ):
+            raise RuntimeError(
+                "OpenAI tool-calling exceeded the maximum "
+                "tool calls allowed in one round."
             )
-            == "function_call"
-        ]
 
     def _to_tool_call(
         self,
-        item: Any,
+        item: ResponsesFunctionCall,
     ) -> ToolCall:
-        tool_name = getattr(
-            item,
-            "name",
-            "",
-        )
-
         capability_name = (
             self._definitions.resolve_capability_name(
-                tool_name
+                item.name
             )
         )
 
         if capability_name is None:
             raise ValueError(
                 "OpenAI returned an unknown tool name: "
-                f"{tool_name}"
+                f"{item.name}"
             )
-
-        call_id = getattr(
-            item,
-            "call_id",
-            None,
-        )
-
-        raw_arguments = getattr(
-            item,
-            "arguments",
-            "{}",
-        )
 
         try:
             arguments = json.loads(
-                raw_arguments
+                item.arguments
             )
         except (
             TypeError,
@@ -215,7 +311,7 @@ class OpenAIToolCallingRunner:
         return ToolCall(
             name=capability_name,
             arguments=arguments,
-            call_id=call_id,
+            call_id=item.call_id,
         )
 
     @staticmethod
@@ -241,18 +337,10 @@ class OpenAIToolCallingRunner:
 
     @staticmethod
     def _response_text(
-        response: Any,
+        response: ResponsesTurnResult,
     ) -> str:
-        text = str(
-            getattr(
-                response,
-                "output_text",
-                "",
-            )
-        ).strip()
-
-        if text:
-            return text
+        if response.output_text:
+            return response.output_text
 
         return (
             "OpenAI completed the tool-calling turn "

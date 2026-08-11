@@ -134,3 +134,59 @@ def test_tool_name_mapping_round_trip() -> None:
         )
         == "smart_home.turn_off"
     )
+
+
+
+def test_factory_serializes_structured_arguments() -> None:
+    from jarvis.services.capability import CapabilityArgument
+
+    registry = CapabilityRegistry(
+        [
+            CapabilityDefinition(
+                name="system.execution_history",
+                description="Read execution history.",
+                arguments={
+                    "limit": CapabilityArgument(
+                        description="Maximum records",
+                        type="integer",
+                        required=True,
+                        minimum=1,
+                        maximum=100,
+                    ),
+                    "include_failures": CapabilityArgument(
+                        description="Include failed executions",
+                        type="boolean",
+                    ),
+                },
+            )
+        ]
+    )
+
+    tools = ToolDefinitionFactory(
+        registry
+    ).to_openai_tools()
+
+    assert tools == [
+        {
+            "type": "function",
+            "name": "system_execution_history",
+            "description": "Read execution history.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "include_failures": {
+                        "type": "boolean",
+                        "description": "Include failed executions",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum records",
+                        "minimum": 1,
+                        "maximum": 100,
+                    },
+                },
+                "additionalProperties": False,
+                "required": ["limit"],
+            },
+        }
+    ]

@@ -1,7 +1,35 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 
+from jarvis.agent.conversation_bridge import AIAgentConversationBridge
+from jarvis.conversation.diagnostics import (
+    ConversationDiagnosticsBuilder,
+    ConversationDiagnosticsSnapshot,
+)
+from jarvis.conversation.execution_boundary import (
+    ConversationExecutionBoundary,
+    ConversationExecutionPolicy,
+)
+from jarvis.conversation.health_report import (
+    ConversationHealthReport,
+    ConversationHealthReporter,
+)
+from jarvis.conversation.operational_metrics import (
+    ConversationOperationalMetrics,
+    ConversationOperationalSnapshot,
+)
+from jarvis.conversation.recovery import ConversationRecoveryService
+from jarvis.conversation.recovery_execution import (
+    ConversationRecoveryExecutionResult,
+    ConversationRecoveryExecutor,
+)
+from jarvis.conversation.turn import (
+    ConversationTurnLifecycle,
+    ConversationTurnResult,
+    ConversationTurnSource,
+)
 from jarvis.core.event_bus import event_bus
 from jarvis.core.events import Event
 from jarvis.planner.conversation_bridge import PlannerConversationBridge
@@ -33,6 +61,9 @@ class ConversationManager:
         smart_home: SmartHomeService | None = None,
         capability_router: CapabilityRouter | None = None,
         capability_resolver: AICapabilityResolver | None = None,
+        conversation_timeout_seconds: float = 60.0,
+        recovery_service: ConversationRecoveryService | None = None,
+        recovery_executor: ConversationRecoveryExecutor | None = None,
     ) -> None:
         self._ai = ai
         self._memory = memory
@@ -41,7 +72,27 @@ class ConversationManager:
         self._capability_router = capability_router
         self._capability_resolver = capability_resolver
         self._planner_bridge: PlannerConversationBridge | None = None
+        self._ai_agent_bridge: AIAgentConversationBridge | None = None
         self._tool_calling_bridge: ToolCallingConversationBridge | None = None
+        self._turn_lifecycle = ConversationTurnLifecycle()
+        self._diagnostics_builder = ConversationDiagnosticsBuilder()
+        self._health_reporter = ConversationHealthReporter()
+        self._operational_metrics = ConversationOperationalMetrics()
+        self._execution_boundary = ConversationExecutionBoundary(
+            ConversationExecutionPolicy(
+                timeout_seconds=conversation_timeout_seconds
+            )
+        )
+        self._recovery_service = (
+            recovery_service
+            if recovery_service is not None
+            else ConversationRecoveryService()
+        )
+        self._recovery_executor = (
+            recovery_executor
+            if recovery_executor is not None
+            else ConversationRecoveryExecutor()
+        )
 
         self._device_resolver = (
             DeviceResolver(smart_home)
@@ -52,6 +103,12 @@ class ConversationManager:
         self._pending_smart_home = (
             PendingSmartHomeActionStore()
         )
+
+    def set_ai_agent_bridge(
+        self,
+        bridge: AIAgentConversationBridge,
+    ) -> None:
+        self._ai_agent_bridge = bridge
 
     def set_planner_bridge(
         self,
@@ -79,7 +136,89 @@ class ConversationManager:
 
     @property
     def has_pending_smart_home(self) -> bool:
-        return self._pending_smart_home.has_pending    
+        return self._pending_smart_home.has_pending
+
+    @property
+    def last_turn(self) -> ConversationTurnResult | None:
+        return self._turn_lifecycle.last_result
+
+    @property
+    def diagnostics_snapshot(
+        self,
+    ) -> ConversationDiagnosticsSnapshot | None:
+        last_turn = self._turn_lifecycle.last_result
+
+        if last_turn is None:
+            return None
+
+        return self._diagnostics_builder.build(
+            last_turn
+        )
+
+    @property
+    def operational_snapshot(
+        self,
+    ) -> ConversationOperationalSnapshot:
+        return self._operational_metrics.snapshot()
+
+    @property
+    def health_report(
+        self,
+    ) -> ConversationHealthReport:
+        return self._health_reporter.build(
+            operational=self.operational_snapshot,
+            latest_turn=self.diagnostics_snapshot,
+        )
+
+    @property
+    def conversation_timeout_seconds(self) -> float:
+        return self._execution_boundary.policy.timeout_seconds
+
+    @property
+    def max_recovery_attempts(self) -> int:
+        return self._recovery_service.policy.max_recovery_attempts
+
+    @property
+    def recovery_safe_message(self) -> str:
+        return self._recovery_executor.safe_message
+
+    @property
+    def last_recovery_execution(
+        self,
+    ) -> ConversationRecoveryExecutionResult | None:
+        last_turn = self._turn_lifecycle.last_result
+
+        if last_turn is None:
+            return None
+
+        execution = last_turn.recovery_execution
+
+        if isinstance(
+            execution,
+            ConversationRecoveryExecutionResult,
+        ):
+            return execution
+
+        return None
+
+    def recovery_plan_for_last_turn(
+        self,
+        *,
+        attempts: int = 0,
+    ):
+        last_turn = self._turn_lifecycle.last_result
+
+        if (
+            last_turn is None
+            or last_turn.reliability is None
+            or last_turn.reliability.failure is None
+        ):
+            return None
+
+        return self._recovery_service.plan(
+            failure=last_turn.reliability.failure,
+            attempts=attempts,
+        )
 
     def cancel_pending_smart_home(self) -> bool:
         if not self._pending_smart_home.has_pending:
@@ -92,11 +231,132 @@ class ConversationManager:
     async def ask(
         self,
         text: str,
+        *,
+        voice_mode: bool = False,
+    ) -> str:
+        normalized_text = text.strip()
+
+        if not normalized_text:
+            self._turn_lifecycle.empty(
+                normalized_text
+            )
+            return ""
+
+        source = self._predict_turn_source()
+
+        async def run_legacy() -> str:
+            if voice_mode:
+                return await self._ask_legacy(
+                    normalized_text,
+                    voice_mode=True,
+                )
+
+            return await self._ask_legacy(
+                normalized_text
+            )
+
+        try:
+            result = await self._turn_lifecycle.run(
+                user_text=normalized_text,
+                source=source,
+                handler=lambda: self._execution_boundary.run(
+                    run_legacy
+                ),
+            )
+        except Exception:
+            recovery_plan = self.recovery_plan_for_last_turn(
+                attempts=0
+            )
+
+            if recovery_plan is None:
+                self._observe_latest_diagnostics()
+                raise
+
+            recovery_result = await self._recovery_executor.execute(
+                outcome=recovery_plan,
+                attempts_used=1,
+                standard_ai_fallback=lambda: self._ai.ask(
+                    text=normalized_text,
+                    history=[],
+                ),
+            )
+
+            if not recovery_result.executed:
+                self._observe_latest_diagnostics()
+                raise
+
+            self._turn_lifecycle.mark_recovery_execution(
+                recovery_result
+            )
+            self._observe_latest_diagnostics()
+
+            return recovery_result.reply
+
+        self._observe_latest_diagnostics()
+
+        return result.reply
+
+    def _observe_latest_diagnostics(
+        self,
+    ) -> None:
+        snapshot = self.diagnostics_snapshot
+
+        if snapshot is not None:
+            self._operational_metrics.observe(
+                snapshot
+            )
+
+    def _predict_turn_source(
+        self,
+    ) -> ConversationTurnSource:
+        if (
+            self._ai_agent_bridge is not None
+            and self._ai_agent_bridge.has_pending_plan
+        ):
+            return ConversationTurnSource.AI_AGENT
+
+        if (
+            self._planner_bridge is not None
+            and self._planner_bridge.has_pending_plan
+        ):
+            return ConversationTurnSource.PLANNER
+
+        if self._pending_smart_home.has_pending:
+            return ConversationTurnSource.SMART_HOME
+
+        return ConversationTurnSource.UNKNOWN
+
+    async def _ask_legacy(
+        self,
+        text: str,
+        *,
+        voice_mode: bool = False,
     ) -> str:
         text = text.strip()
 
         if not text:
             return ""
+
+        if (
+            self._ai_agent_bridge is not None
+            and self._ai_agent_bridge.has_pending_plan
+        ):
+            agent_reply = (
+                await self._ai_agent_bridge.handle_pending(
+                    text
+                )
+            )
+
+            if agent_reply.handled:
+                self._turn_lifecycle.mark_source(
+                    ConversationTurnSource.AI_AGENT
+                )
+                await self._save_conversation(
+                    user_text=text,
+                    reply=agent_reply.reply,
+                    tool="ai_agent",
+                )
+                return agent_reply.reply
 
         if (
             self._planner_bridge is not None
@@ -106,6 +366,9 @@ class ConversationManager:
                 text
             )
             if planner_reply.handled:
+                self._turn_lifecycle.mark_source(
+                    ConversationTurnSource.PLANNER
+                )
                 await self._save_conversation(
                     user_text=text,
                     reply=planner_reply.reply,
@@ -114,6 +377,9 @@ class ConversationManager:
                 return planner_reply.reply
 
         if self._pending_smart_home.has_pending:
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.SMART_HOME
+            )
             reply = await self._handle_pending_smart_home(
                 text
             )
@@ -142,20 +408,30 @@ class ConversationManager:
 
         if tool_type == ToolType.AI:
             reply = await self._handle_ai_route(
-                text
+                text,
+                voice_mode=voice_mode,
             )
 
         elif tool_type == ToolType.SMART_HOME:
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.SMART_HOME
+            )
             reply = await self._handle_smart_home(
                 text
             )
 
         elif tool_type == ToolType.SYSTEM:
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.SYSTEM
+            )
             reply = await self._handle_system(
                 text
             )
 
         elif tool_type == ToolType.PLUGIN:
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.PLUGIN
+            )
             reply = (
                 "ระบบ Plugin "
                 "ยังไม่ได้เชื่อมต่อครับ"
@@ -205,29 +481,109 @@ class ConversationManager:
     async def _handle_ai_route(
         self,
         text: str,
+        *,
+        voice_mode: bool = False,
     ) -> str:
-        if self._planner_bridge is not None:
-            planner_reply = await self._planner_bridge.handle_ai_request(
-                text
-            )
-            if planner_reply.handled:
-                return planner_reply.reply
+        route_started = time.perf_counter()
 
+        system_capability = self._resolve_system_capability(
+            text
+        )
+
+        if (
+            system_capability is not None
+            and self._capability_router is not None
+        ):
+            started = time.perf_counter()
+
+            result = await self._capability_router.execute(
+                system_capability,
+            )
+
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.CAPABILITY
+            )
+
+            elapsed = time.perf_counter() - started
+
+            print(
+                "[Latency] Deterministic system : "
+                f"{elapsed:.3f} s "
+                f"({system_capability})"
+            )
+
+            return self._format_system_result(
+                system_capability,
+                result,
+                user_text=text,
+            )
+
+        # Production fast path:
+        # Native tool-calling AI can decide whether a tool is needed
+        # in a single model turn.
+        if self._tool_calling_bridge is not None:
+            started = time.perf_counter()
+
+            reply = await self._ask_ai(
+                text,
+                voice_mode=voice_mode,
+            )
+
+            elapsed = time.perf_counter() - started
+
+            print(
+                "[Latency] Fast native AI        : "
+                f"{elapsed:.3f} s"
+            )
+
+            total = time.perf_counter() - route_started
+
+            print(
+                "[Latency] Fast AI route total   : "
+                f"{total:.3f} s"
+            )
+
+            return reply
+
+        # Compatibility path:
+        # Used when native tool calling is unavailable.
         if (
             self._capability_resolver is not None
             and self._capability_router is not None
         ):
-            request = (
-                await self._capability_resolver.resolve(
-                    text,
-                )
+            started = time.perf_counter()
+
+            request = await self._capability_resolver.resolve(
+                text
+            )
+
+            elapsed = time.perf_counter() - started
+
+            print(
+                "[Latency] Capability fallback   : "
+                f"{elapsed:.3f} s "
+                f"(matched={request is not None})"
             )
 
             if request is not None:
+                self._turn_lifecycle.mark_source(
+                    ConversationTurnSource.CAPABILITY
+                )
+
                 result = (
                     await self._capability_router.execute_request(
-                        request,
+                        request
                     )
+                )
+
+                total = (
+                    time.perf_counter()
+                    - route_started
+                )
+
+                print(
+                    "[Latency] AI route total       : "
+                    f"{total:.3f} s"
                 )
 
                 return self._format_capability_result(
@@ -235,13 +591,126 @@ class ConversationManager:
                     result,
                 )
 
-        return await self._ask_ai(
-            text
+        started = time.perf_counter()
+
+        reply = await self._ask_ai(
+            text,
+            voice_mode=voice_mode,
         )
+
+        elapsed = time.perf_counter() - started
+
+        print(
+            "[Latency] Standard AI fallback   : "
+            f"{elapsed:.3f} s"
+        )
+
+        total = time.perf_counter() - route_started
+
+        print(
+            "[Latency] AI route total         : "
+            f"{total:.3f} s"
+        )
+
+        return reply
+
+    @staticmethod
+    def _guard_voice_reply(
+        *,
+        user_text: str,
+        reply: str,
+    ) -> str:
+        """Keep simple spoken recommendations concise.
+
+        This guard is intentionally conservative. It only shortens
+        recommendation-style replies when the user did not explicitly
+        request details or an explanation.
+        """
+        normalized_user = user_text.strip().lower()
+        normalized_reply = reply.strip()
+
+        if not normalized_reply:
+            return normalized_reply
+
+        detail_markers = (
+            "ทำไม",
+            "เพราะอะไร",
+            "อธิบาย",
+            "รายละเอียด",
+            "มีอะไรบ้าง",
+            "กี่อย่าง",
+            "หลาย",
+            "ตัวเลือก",
+            "ขั้นตอน",
+            "วิธี",
+            "why",
+            "explain",
+            "detail",
+            "details",
+            "options",
+            "steps",
+            "how",
+        )
+
+        if any(
+            marker in normalized_user
+            for marker in detail_markers
+        ):
+            return normalized_reply
+
+        recommendation_markers = (
+            "กินอะไรดี",
+            "แนะนำอะไร",
+            "เลือกอะไรดี",
+            "เอาอะไรดี",
+            "what should i eat",
+            "what do you recommend",
+            "what should i choose",
+        )
+
+        if not any(
+            marker in normalized_user
+            for marker in recommendation_markers
+        ):
+            return normalized_reply
+
+        polite_endings = (
+            "ครับ",
+            "ค่ะ",
+            "คะ",
+        )
+
+        for ending in polite_endings:
+            search_from = 0
+
+            while True:
+                ending_index = normalized_reply.find(
+                    ending,
+                    search_from,
+                )
+
+                if ending_index == -1:
+                    break
+
+                candidate = normalized_reply[
+                    : ending_index + len(ending)
+                ].strip()
+
+                if len(candidate) >= 8:
+                    return candidate
+
+                search_from = (
+                    ending_index
+                    + len(ending)
+                )
+
+        return normalized_reply
 
     async def _ask_ai(
         self,
         text: str,
+        *,
+        voice_mode: bool = False,
     ) -> str:
         await event_bus.publish(
             Event(
@@ -255,14 +724,45 @@ class ConversationManager:
         history = await self._memory.get_ai_history()
 
         if self._tool_calling_bridge is not None:
-            reply = await self._tool_calling_bridge.ask(
-                text=text,
-                history=history,
+            if voice_mode:
+                reply = await self._tool_calling_bridge.ask(
+                    text=text,
+                    history=history,
+                    voice_mode=True,
+                )
+            else:
+                reply = await self._tool_calling_bridge.ask(
+                    text=text,
+                    history=history,
+                )
+
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.FALLBACK_AI
+                if self._tool_calling_bridge.last_used_fallback
+                else ConversationTurnSource.NATIVE_TOOL
             )
+
         else:
-            reply = await self._ai.ask(
-                text=text,
-                history=history,
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.FALLBACK_AI
+            )
+
+            if voice_mode:
+                reply = await self._ai.ask(
+                    text=text,
+                    history=history,
+                    voice_mode=True,
+                )
+            else:
+                reply = await self._ai.ask(
+                    text=text,
+                    history=history,
+                )
+
+        if voice_mode:
+            reply = self._guard_voice_reply(
+                user_text=text,
+                reply=reply,
             )
 
         await event_bus.publish(
@@ -275,7 +775,7 @@ class ConversationManager:
         )
 
         return reply
-
+    
     async def _handle_system(
         self,
         text: str,
@@ -311,43 +811,67 @@ class ConversationManager:
     ) -> str | None:
         normalized_text = text.lower().strip()
 
-        ping_keywords = (
+
+        datetime_phrases = (
+            # Thai
+            "วันนี้วันอะไร",
+            "วันนี้วันที่เท่าไหร่",
+            "วันนี้วันที่อะไร",
+            "วันนี้วันไหน",
+            "ตอนนี้กี่โมง",
+            "ตอนนี้เวลาอะไร",
+            "เวลาเท่าไหร่",
+
+            # English
+            "what time is it",
+            "what day is it",
+            "what is the date",
+            "what's the date",
+            "what is today's date",
+            "what's today's date",
+            "what's the date today",
+        )
+
+        ping_exact = (
             "ping",
+            "system ping",
             "ทดสอบระบบ",
             "ระบบทำงานไหม",
             "ระบบทำงานหรือไม่",
         )
 
-        health_keywords = (
+        health_exact = (
             "health",
             "health check",
+            "system health",
+            "system health check",
             "ตรวจสุขภาพระบบ",
             "ตรวจสอบระบบ",
         )
 
-        version_keywords = (
+        version_exact = (
             "version",
+            "system version",
+            "jarvis version",
+            "jarvisai version",
             "เวอร์ชัน",
             "เวอร์ชั่น",
         )
 
-        if any(
-            keyword in normalized_text
-            for keyword in ping_keywords
-        ):
+        if normalized_text in ping_exact:
             return "system.ping"
 
-        if any(
-            keyword in normalized_text
-            for keyword in health_keywords
-        ):
+        if normalized_text in health_exact:
             return "system.health"
 
-        if any(
-            keyword in normalized_text
-            for keyword in version_keywords
-        ):
+        if normalized_text in version_exact:
             return "system.version"
+
+        if any(
+            phrase in normalized_text
+            for phrase in datetime_phrases
+        ):
+            return "system.datetime"
 
         return None
 
@@ -372,6 +896,8 @@ class ConversationManager:
     def _format_system_result(
         capability: str,
         result: Any,
+        *,
+        user_text: str | None = None,
     ) -> str:
         if capability == "system.ping":
             if (
@@ -422,8 +948,138 @@ class ConversationManager:
 
             return str(result)
 
-        return str(result)
+        
+        if capability == "system.datetime":
+            if isinstance(result, dict):
+                date_value = result.get("date")
+                time_value = result.get("time")
+                weekday = result.get("weekday")
 
+                if (
+                    isinstance(date_value, str)
+                    and isinstance(time_value, str)
+                    and isinstance(weekday, str)
+                ):
+                    try:
+                        year_text, month_text, day_text = (
+                            date_value.split("-")
+                        )
+
+                        year = int(year_text)
+                        month = int(month_text)
+                        day = int(day_text)
+
+                        month_names = {
+                            1: "มกราคม",
+                            2: "กุมภาพันธ์",
+                            3: "มีนาคม",
+                            4: "เมษายน",
+                            5: "พฤษภาคม",
+                            6: "มิถุนายน",
+                            7: "กรกฎาคม",
+                            8: "สิงหาคม",
+                            9: "กันยายน",
+                            10: "ตุลาคม",
+                            11: "พฤศจิกายน",
+                            12: "ธันวาคม",
+                        }
+
+                        weekday_names = {
+                            "Monday": "วันจันทร์",
+                            "Tuesday": "วันอังคาร",
+                            "Wednesday": "วันพุธ",
+                            "Thursday": "วันพฤหัสบดี",
+                            "Friday": "วันศุกร์",
+                            "Saturday": "วันเสาร์",
+                            "Sunday": "วันอาทิตย์",
+                        }
+
+                        month_th = month_names.get(
+                            month,
+                            month_text,
+                        )
+
+                        weekday_th = weekday_names.get(
+                            weekday,
+                            weekday,
+                        )
+
+                        short_time = time_value[:5]
+
+                        normalized_text = (
+                            user_text.lower().strip()
+                            if user_text is not None
+                            else ""
+                        )
+
+                        time_queries = (
+                            "ตอนนี้กี่โมง",
+                            "ตอนนี้เวลาอะไร",
+                            "เวลาเท่าไหร่",
+                            "what time is it",
+                        )
+
+                        date_queries = (
+                            "วันนี้วันที่เท่าไหร่",
+                            "วันนี้วันที่อะไร",
+                            "what is the date",
+                            "what's the date",
+                            "what is today's date",
+                            "what's today's date",
+                            "what's the date today",
+                        )
+
+                        day_queries = (
+                            "วันนี้วันอะไร",
+                            "วันนี้วันไหน",
+                            "what day is it",
+                        )
+
+                        if any(
+                            phrase in normalized_text
+                            for phrase in time_queries
+                        ):
+                            return (
+                                "ครับ TK, ตอนนี้เวลา "
+                                f"{short_time} น. ครับ"
+                            )
+
+                        if any(
+                            phrase in normalized_text
+                            for phrase in date_queries
+                        ):
+                            return (
+                                "ครับ TK, วันนี้วันที่ "
+                                f"{day} {month_th} "
+                                f"{year} ครับ"
+                            )
+
+                        if any(
+                            phrase in normalized_text
+                            for phrase in day_queries
+                        ):
+                            return (
+                                "ครับ TK, วันนี้"
+                                f"{weekday_th}ครับ"
+                            )
+
+                        return (
+                            "ครับ TK, ตอนนี้เวลา "
+                            f"{short_time} น. "
+                            f"{weekday_th}ที่ {day} "
+                            f"{month_th} {year} ครับ"
+                        )
+
+                    except (
+                        TypeError,
+                        ValueError,
+                    ):
+                        return str(result)
+
+            return str(result)
+
+        return str(result)
+    
     async def _handle_smart_home(
         self,
         text: str,
@@ -568,7 +1224,7 @@ class ConversationManager:
             )
         )
 
-    
+
 
         # ----------------------------    @classmethod
     def _match_pending_candidates(

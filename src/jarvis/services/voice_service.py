@@ -220,6 +220,7 @@ class VoiceService:
 
         reply = await self._conversation.ask(
             text=text,
+            voice_mode=True,
         )
 
         reply = reply.strip()

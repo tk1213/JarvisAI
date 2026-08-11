@@ -29,6 +29,8 @@ class PlanRiskPolicy:
     )
 
     _READ_ONLY_SUFFIXES: ClassVar[tuple[str, ...]] = (
+
+        ".datetime",
         ".get",
         ".health",
         ".list",

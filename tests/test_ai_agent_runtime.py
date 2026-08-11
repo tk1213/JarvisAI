@@ -195,3 +195,32 @@ async def test_runtime_executes_reflects_and_remembers() -> None:
     assert result.reflection is not None
     assert result.memory_record is not None
     assert result.memory_record.goal == "Check Jarvis"
+
+
+def test_runtime_exposes_memory_lifecycle() -> None:
+    runtime = make_runtime(
+        FakeOrchestrator(
+            preview=None
+        )
+    )
+
+    assert runtime.memory_lifecycle.store is runtime._memory  # type: ignore[attr-defined]
+
+
+
+@pytest.mark.asyncio
+async def test_runtime_tracks_last_result() -> None:
+    runtime = make_runtime(
+        FakeOrchestrator(
+            preview=None
+        )
+    )
+
+    assert runtime.last_result is None
+
+    result = await runtime.run(
+        "hello"
+    )
+
+    assert runtime.last_result is result
+    assert runtime.last_result.status is AIAgentRunStatus.NO_PLAN

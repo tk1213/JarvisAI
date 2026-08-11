@@ -1,39 +1,11 @@
-# JarvisAI v0.5.0-alpha.6 — Sprint 4.0 Pack F
+# JarvisAI v0.6.1-alpha.6.1 — Sprint 6 Pack F Hotfix 1
 
-Completes Sprint 4.0 with an AI agent runtime layer that reuses the actual
-JarvisAI planning architecture.
+## Wake Handoff + Cancellation Diagnostics
 
-## Added
+This hotfix addresses the Pack F live failure where:
 
-- `AIAgentRunStatus`
-- `AIAgentRunResult`
-- `AIAgentRuntime`
-- `AIAgentRunReport`
-- `AIAgentRunReportBuilder`
+- the first transcript could be unrelated to the spoken phrase
+- the second turn ended with `cancelled`
 
-## Reused production services
-
-- `AIPlanGenerator`
-- `PlannerOrchestrator`
-- `PlannerService`
-- `PersistingPlanExecutor`
-- `ExecutionPersistenceService`
-- `AIPlanReflectionService`
-- `AIPlanMemoryStore`
-
-## Runtime behavior
-
-The agent runtime:
-
-1. asks the existing orchestrator to prepare a plan
-2. stops safely when confirmation is required
-3. executes read-only plans immediately
-4. reflects on the execution result
-5. records bounded in-memory experience
-
-## Safety
-
-Side-effect plans remain governed by the existing `ExecutionPolicy` and
-pending-confirmation path.
-
-The runtime never bypasses confirmation.
+It shortens the post-ack handoff and adds stage diagnostics without weakening
+real asyncio cancellation semantics.

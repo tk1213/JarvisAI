@@ -21,6 +21,7 @@ class WakeWordService:
     def __init__(
         self,
         *,
+        audio: AudioManager | None = None,
         threshold: float = 0.50,
         model: Model = Model.HEY_JARVIS,
         wake_sample_rate: int = 16000,
@@ -44,30 +45,27 @@ class WakeWordService:
                 "greater than zero."
             )
 
-        self._audio = AudioManager()
+        self._audio = (
+            audio
+            if audio is not None
+            else AudioManager()
+        )
 
         self._threshold = threshold
         self._model_type = model
+        self._wake_sample_rate = wake_sample_rate
+        self._wake_frame_samples = wake_frame_samples
 
-        self._wake_sample_rate = (
-            wake_sample_rate
-        )
-
-        self._wake_frame_samples = (
-            wake_frame_samples
-        )
-
-        self._features = (
-            OpenWakeWordFeatures.from_builtin()
-        )
-
-        self._wake_word = (
-            OpenWakeWord.from_builtin(
-                self._model_type
-            )
+        self._features = OpenWakeWordFeatures.from_builtin()
+        self._wake_word = OpenWakeWord.from_builtin(
+            self._model_type
         )
 
         self._closed = False
+
+    @property
+    def audio(self) -> AudioManager:
+        return self._audio
 
     @property
     def threshold(self) -> float:
@@ -93,11 +91,10 @@ class WakeWordService:
 
         self.reset()
 
-        input_rate = self._audio.sample_rate
+        input_rate = self._audio.input_info.default_sample_rate
+        input_device = self._audio.input_device
 
-        audio_queue: queue.Queue[np.ndarray] = (
-            queue.Queue()
-        )
+        audio_queue: queue.Queue[np.ndarray] = queue.Queue()
 
         pcm_buffer = np.empty(
             0,
@@ -109,15 +106,8 @@ class WakeWordService:
             self._wake_sample_rate,
         )
 
-        up = (
-            self._wake_sample_rate
-            // gcd
-        )
-
-        down = (
-            input_rate
-            // gcd
-        )
+        up = self._wake_sample_rate // gcd
+        down = input_rate // gcd
 
         def callback(
             indata: np.ndarray,
@@ -141,18 +131,16 @@ class WakeWordService:
             blocksize=0,
             dtype="float32",
             channels=1,
-            device=self._audio.input_device,
+            device=input_device,
             latency="high",
             callback=callback,
         ):
             while not self._closed:
                 try:
-                    native_chunk = (
-                        await asyncio.to_thread(
-                            audio_queue.get,
-                            True,
-                            0.25,
-                        )
+                    native_chunk = await asyncio.to_thread(
+                        audio_queue.get,
+                        True,
+                        0.25,
                     )
 
                 except queue.Empty:
@@ -192,10 +180,7 @@ class WakeWordService:
                     )
                 )
 
-                while (
-                    len(pcm_buffer)
-                    >= self._wake_frame_samples
-                ):
+                while len(pcm_buffer) >= self._wake_frame_samples:
                     frame = pcm_buffer[
                         : self._wake_frame_samples
                     ]
@@ -204,17 +189,13 @@ class WakeWordService:
                         self._wake_frame_samples :
                     ]
 
-                    embeddings_iter = (
-                        self._features.process_streaming(
-                            frame.tobytes()
-                        )
+                    embeddings_iter = self._features.process_streaming(
+                        frame.tobytes()
                     )
 
                     for embeddings in embeddings_iter:
-                        scores = (
-                            self._wake_word.process_streaming(
-                                embeddings
-                            )
+                        scores = self._wake_word.process_streaming(
+                            embeddings
                         )
 
                         for score in scores:
@@ -227,10 +208,7 @@ class WakeWordService:
                                     current_score
                                 )
 
-                            if (
-                                current_score
-                                >= self._threshold
-                            ):
+                            if current_score >= self._threshold:
                                 return current_score
 
         if self._closed:

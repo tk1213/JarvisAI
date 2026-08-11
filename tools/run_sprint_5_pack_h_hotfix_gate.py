@@ -1,0 +1,74 @@
+from __future__ import annotations
+
+import subprocess
+import sys
+
+COMMANDS = (
+    (
+        "Compile",
+        [
+            sys.executable,
+            "-m",
+            "compileall",
+            "-q",
+            "src",
+            "tests",
+            "tools",
+        ],
+    ),
+    (
+        "Ruff",
+        [
+            "ruff",
+            "check",
+            "src",
+            "tests",
+            "tools",
+        ],
+    ),
+    (
+        "Pack H Focused Pytest",
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "tests/test_audio_player_shared_manager.py",
+            "tests/test_service_factory_voice_turn.py",
+            "tests/test_voice_turn_runtime.py",
+            "tests/test_application_lifecycle.py",
+            "-q",
+        ],
+    ),
+    (
+        "Full Pytest",
+        [
+            sys.executable,
+            "-m",
+            "pytest",
+            "-q",
+        ],
+    ),
+)
+
+
+def main() -> None:
+    for name, command in COMMANDS:
+        print()
+        print(f"=== {name} ===")
+
+        completed = subprocess.run(
+            command,
+            check=False,
+        )
+
+        if completed.returncode != 0:
+            raise SystemExit(
+                completed.returncode
+            )
+
+    print()
+    print("Sprint 5 Pack H hotfix quality gate: PASS")
+
+
+if __name__ == "__main__":
+    main()

@@ -126,6 +126,31 @@ class SpeechToText:
             "no clear speech",
         )
 
+        prompt_text = cls._build_prompt(
+            language
+        )
+
+        normalized_prompt = cls._normalize(
+            prompt_text
+        )
+
+        if normalized_prompt:
+            if normalized == normalized_prompt:
+                return True
+
+            prompt_prefixes = (
+                "บทสนทนาภาษาไทยกับผู้ช่วย jarvisai",
+                "บทสนทนาภาษาไทยกับผู้ช่วย",
+            )
+
+            if any(
+                normalized.startswith(
+                    cls._normalize(prefix)
+                )
+                for prefix in prompt_prefixes
+            ):
+                return True
+
         if any(
             fragment in normalized
             for fragment in suspicious_fragments
@@ -215,29 +240,20 @@ class SpeechToText:
         language: str | None,
     ) -> str:
         if (
-            language is None
-            or language.lower().strip() != "th"
+            language is not None
+            and language.lower().strip() == "th"
         ):
-            return ""
+            return (
+                "บทสนทนาภาษาไทยกับผู้ช่วย JarvisAI "
+                "ให้ถอดเสียงภาษาไทยตามคำพูดจริงอย่างแม่นยำ "
+                "โดยเฉพาะคำต้นประโยคและคำสั้นที่ออกเสียงใกล้กัน "
+                "อย่าเดาหรือเปลี่ยนคำเมื่อเสียงชัดเจน "
+                "ผู้พูดอาจใช้คำภาษาอังกฤษปนภาษาไทย เช่น "
+                "Jarvis, AI, smart home, system, health, "
+                "version และ ping"
+            )
 
-        return (
-            "ถอดเสียงเป็นภาษาไทยสำหรับระบบ "
-            "JarvisAI Smart Home "
-            "รักษาคำชื่ออุปกรณ์และคำสั่งให้ถูกต้อง "
-            "ตามบริบท "
-            "คำที่พบบ่อย ได้แก่ "
-            "Jarvis, Hey Jarvis, "
-            "Smart Plug, Smart plug 2, "
-            "สมาร์ทปลั๊ก, ปลั๊ก, "
-            "เปิด, ปิด, สถานะ, "
-            "ห้องนอน, ห้องนั่งเล่น, โรงรถ, "
-            "เปิดปลั๊ก, ปิดปลั๊ก, "
-            "เปิดสมาร์ทปลั๊กสอง, "
-            "ปิดสมาร์ทปลั๊กสอง "
-            "ถ้าเสียงใกล้เคียงคำว่า "
-            "สมาร์ทปลั๊ก "
-            "ให้ถอดเป็น สมาร์ทปลั๊ก"
-        )
+        return ""
 
     @staticmethod
     def _normalize(

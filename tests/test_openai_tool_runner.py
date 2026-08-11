@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from types import SimpleNamespace
 
 import pytest
 
+from jarvis.ai.responses_contracts import (
+    ResponsesFunctionCall,
+    ResponsesTurnResult,
+)
 from jarvis.tools.contracts import ToolResult
 from jarvis.tools.openai_runner import OpenAIToolCallingRunner
 
@@ -53,7 +58,7 @@ class FakeExecutor:
         )
 
 
-class FakeResponses:
+class FakeResponsesService:
     def __init__(
         self,
         responses,
@@ -63,10 +68,10 @@ class FakeResponses:
         )
         self.calls = []
 
-    async def create(
+    async def create_turn(
         self,
         **kwargs,
-    ):
+    ) -> ResponsesTurnResult:
         self.calls.append(
             kwargs
         )
@@ -77,15 +82,10 @@ class FakeResponses:
 
 
 class FakeAI:
-    def __init__(
-        self,
-        responses,
-    ) -> None:
+    def __init__(self) -> None:
         self.model = "test-model"
         self.client = SimpleNamespace(
-            responses=FakeResponses(
-                responses
-            )
+            responses=SimpleNamespace()
         )
 
     def _build_conversation(
@@ -114,58 +114,54 @@ class FakeAI:
         return "fallback"
 
 
-def function_call_response():
-    return SimpleNamespace(
-        id="resp-1",
-        output=[
-            SimpleNamespace(
-                type="function_call",
+def function_call_response() -> ResponsesTurnResult:
+    return ResponsesTurnResult(
+        response_id="resp-1",
+        model="test-model",
+        status="completed",
+        output_text="",
+        function_calls=(
+            ResponsesFunctionCall(
                 name="system_ping",
                 arguments="{}",
                 call_id="call-1",
-            )
-        ],
-        output_text="",
+            ),
+        ),
     )
 
 
-def final_response():
-    return SimpleNamespace(
-        id="resp-2",
-        output=[],
+def final_response() -> ResponsesTurnResult:
+    return ResponsesTurnResult(
+        response_id="resp-2",
+        model="test-model",
+        status="completed",
         output_text="Jarvis is healthy.",
     )
 
 
 @pytest.mark.asyncio
 async def test_runner_executes_function_call_and_continues() -> None:
-    ai = FakeAI(
+    responses = FakeResponsesService(
         [
             function_call_response(),
             final_response(),
         ]
     )
 
-    definitions = FakeDefinitions(
-        [
-            {
-                "type": "function",
-                "name": "system_ping",
-                "description": "Ping",
-                "parameters": {
-                    "type": "object",
-                    "properties": {},
-                },
-            }
-        ]
-    )
-
     executor = FakeExecutor()
 
     runner = OpenAIToolCallingRunner(
-        ai=ai,  # type: ignore[arg-type]
-        definitions=definitions,  # type: ignore[arg-type]
+        ai=FakeAI(),  # type: ignore[arg-type]
+        definitions=FakeDefinitions(  # type: ignore[arg-type]
+            [
+                {
+                    "type": "function",
+                    "name": "system_ping",
+                }
+            ]
+        ),
         executor=executor,  # type: ignore[arg-type]
+        responses_service=responses,  # type: ignore[arg-type]
     )
 
     result = await runner.run(
@@ -176,40 +172,29 @@ async def test_runner_executes_function_call_and_continues() -> None:
     assert len(result.tool_results) == 1
     assert executor.calls[0].name == "system.ping"
 
-    second_request = (
-        ai.client.responses.calls[1]
-    )
+    second_request = responses.calls[1]
 
+    assert second_request["previous_response_id"] == "resp-1"
     assert (
-        second_request["previous_response_id"]
-        == "resp-1"
-    )
-
-    assert (
-        second_request["input"][0]["type"]
+        second_request["input_items"][0]["type"]
         == "function_call_output"
     )
-
     assert (
-        second_request["input"][0]["call_id"]
+        second_request["input_items"][0]["call_id"]
         == "call-1"
     )
 
 
 @pytest.mark.asyncio
 async def test_runner_returns_direct_text_without_tool_call() -> None:
-    ai = FakeAI(
+    responses = FakeResponsesService(
         [
-            SimpleNamespace(
-                id="resp-1",
-                output=[],
-                output_text="Hello.",
-            )
+            final_response(),
         ]
     )
 
     runner = OpenAIToolCallingRunner(
-        ai=ai,  # type: ignore[arg-type]
+        ai=FakeAI(),  # type: ignore[arg-type]
         definitions=FakeDefinitions(  # type: ignore[arg-type]
             [
                 {
@@ -219,24 +204,26 @@ async def test_runner_returns_direct_text_without_tool_call() -> None:
             ]
         ),
         executor=FakeExecutor(),  # type: ignore[arg-type]
+        responses_service=responses,  # type: ignore[arg-type]
     )
 
     result = await runner.run(
         "Hello"
     )
 
-    assert result.text == "Hello."
+    assert result.text == "Jarvis is healthy."
     assert result.tool_results == ()
 
 
 def test_invalid_arguments_are_rejected() -> None:
     runner = OpenAIToolCallingRunner(
-        ai=FakeAI([]),  # type: ignore[arg-type]
+        ai=FakeAI(),  # type: ignore[arg-type]
         definitions=FakeDefinitions([]),  # type: ignore[arg-type]
         executor=FakeExecutor(),  # type: ignore[arg-type]
+        responses_service=FakeResponsesService([]),  # type: ignore[arg-type]
     )
 
-    item = SimpleNamespace(
+    item = ResponsesFunctionCall(
         name="system_ping",
         arguments="not-json",
         call_id="call-1",
@@ -253,12 +240,13 @@ def test_invalid_arguments_are_rejected() -> None:
 
 def test_unknown_tool_name_is_rejected() -> None:
     runner = OpenAIToolCallingRunner(
-        ai=FakeAI([]),  # type: ignore[arg-type]
+        ai=FakeAI(),  # type: ignore[arg-type]
         definitions=FakeDefinitions([]),  # type: ignore[arg-type]
         executor=FakeExecutor(),  # type: ignore[arg-type]
+        responses_service=FakeResponsesService([]),  # type: ignore[arg-type]
     )
 
-    item = SimpleNamespace(
+    item = ResponsesFunctionCall(
         name="unknown_tool",
         arguments="{}",
         call_id="call-1",
@@ -270,4 +258,119 @@ def test_unknown_tool_name_is_rejected() -> None:
     ):
         runner._to_tool_call(
             item
+        )
+
+
+
+def test_runner_rejects_invalid_timeout() -> None:
+    with pytest.raises(
+        ValueError,
+        match="run_timeout_seconds",
+    ):
+        OpenAIToolCallingRunner(
+            ai=FakeAI(),  # type: ignore[arg-type]
+            definitions=FakeDefinitions([]),  # type: ignore[arg-type]
+            executor=FakeExecutor(),  # type: ignore[arg-type]
+            responses_service=FakeResponsesService([]),  # type: ignore[arg-type]
+            run_timeout_seconds=0,
+        )
+
+
+def test_runner_rejects_invalid_tool_call_limit() -> None:
+    with pytest.raises(
+        ValueError,
+        match="max_tool_calls_per_round",
+    ):
+        OpenAIToolCallingRunner(
+            ai=FakeAI(),  # type: ignore[arg-type]
+            definitions=FakeDefinitions([]),  # type: ignore[arg-type]
+            executor=FakeExecutor(),  # type: ignore[arg-type]
+            responses_service=FakeResponsesService([]),  # type: ignore[arg-type]
+            max_tool_calls_per_round=0,
+        )
+
+
+@pytest.mark.asyncio
+async def test_runner_blocks_excessive_calls_in_one_round() -> None:
+    calls = tuple(
+        ResponsesFunctionCall(
+            name="system_ping",
+            arguments="{}",
+            call_id=f"call-{index}",
+        )
+        for index in range(3)
+    )
+
+    responses = FakeResponsesService(
+        [
+            ResponsesTurnResult(
+                response_id="resp-1",
+                model="test-model",
+                status="completed",
+                output_text="",
+                function_calls=calls,
+            )
+        ]
+    )
+
+    runner = OpenAIToolCallingRunner(
+        ai=FakeAI(),  # type: ignore[arg-type]
+        definitions=FakeDefinitions(  # type: ignore[arg-type]
+            [
+                {
+                    "type": "function",
+                    "name": "system_ping",
+                }
+            ]
+        ),
+        executor=FakeExecutor(),  # type: ignore[arg-type]
+        responses_service=responses,  # type: ignore[arg-type]
+        max_tool_calls_per_round=2,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="maximum tool calls",
+    ):
+        await runner.run(
+            "Run too many tools"
+        )
+
+
+@pytest.mark.asyncio
+async def test_runner_enforces_total_timeout() -> None:
+    class SlowResponsesService:
+        async def create_turn(
+            self,
+            **kwargs,
+        ) -> ResponsesTurnResult:
+            del kwargs
+
+            await asyncio.sleep(
+                0.05
+            )
+
+            return final_response()
+
+    runner = OpenAIToolCallingRunner(
+        ai=FakeAI(),  # type: ignore[arg-type]
+        definitions=FakeDefinitions(  # type: ignore[arg-type]
+            [
+                {
+                    "type": "function",
+                    "name": "system_ping",
+                }
+            ]
+        ),
+        executor=FakeExecutor(),  # type: ignore[arg-type]
+        responses_service=SlowResponsesService(),  # type: ignore[arg-type]
+        run_timeout_seconds=0.01,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="run timeout",
+    ):
+        await runner.run(
+            "Check health"
         )

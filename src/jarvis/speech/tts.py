@@ -18,6 +18,7 @@ class TextToSpeech:
             api_key=api_key,
             timeout=60.0,
             max_retries=2,
+            
         )
 
         self.model = settings.tts_model
@@ -45,6 +46,7 @@ class TextToSpeech:
                 voice=self.voice,
                 input=text,
                 response_format="wav",
+                speed=settings.tts_speed,
             )
         ) as response:
             await response.stream_to_file(output_path)

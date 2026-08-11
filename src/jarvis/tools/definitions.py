@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from jarvis.services.capability import CapabilityDefinition
+from jarvis.services.capability import (
+    CapabilityArgument,
+    CapabilityArgumentDefinition,
+    CapabilityDefinition,
+)
 from jarvis.services.capability_registry import CapabilityRegistry
 
 
@@ -67,20 +71,31 @@ class ToolDefinitionFactory:
         definition: CapabilityDefinition,
     ) -> ToolDefinition:
         properties: dict[str, Any] = {}
+        required: list[str] = []
 
-        for name, description in sorted(
+        for name, argument in sorted(
             definition.arguments.items()
         ):
-            properties[name] = {
-                "type": "string",
-                "description": description,
-            }
+            properties[name] = (
+                ToolDefinitionFactory._argument_schema(
+                    argument
+                )
+            )
+
+            if (
+                isinstance(argument, CapabilityArgument)
+                and argument.required
+            ):
+                required.append(name)
 
         parameters: dict[str, Any] = {
             "type": "object",
             "properties": properties,
             "additionalProperties": False,
         }
+
+        if required:
+            parameters["required"] = required
 
         return ToolDefinition(
             name=ToolDefinitionFactory.to_tool_name(
@@ -95,6 +110,18 @@ class ToolDefinitionFactory:
             ),
             parameters=parameters,
         )
+
+    @staticmethod
+    def _argument_schema(
+        argument: CapabilityArgumentDefinition,
+    ) -> dict[str, Any]:
+        if isinstance(argument, CapabilityArgument):
+            return argument.to_json_schema()
+
+        return {
+            "type": "string",
+            "description": argument,
+        }
 
     def to_openai_tools(
         self,

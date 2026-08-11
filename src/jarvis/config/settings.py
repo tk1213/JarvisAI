@@ -53,6 +53,10 @@ class Settings(BaseSettings):
 
     openai_model: str = "gpt-5.5"
 
+    openai_timeout_seconds: float = 60.0
+    openai_max_retries: int = 2
+    openai_max_output_tokens: int | None = None
+
     # ---------------------------------------------------------
     # Smart Home
     # ---------------------------------------------------------
@@ -95,6 +99,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------
     tts_model: str = "gpt-4o-mini-tts"
     tts_language: str = "th"
+    tts_speed: float = 1.15
 
     # ---------------------------------------------------------
     # Audio

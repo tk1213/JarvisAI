@@ -12,10 +12,13 @@ class AIService:
         self,
         text: str,
         history: list[dict[str, str]] | None = None,
+        *,
+        voice_mode: bool = False,
     ) -> str:
         return await self.client.chat(
             message=text,
             history=history,
+            voice_mode=voice_mode,
         )
 
     async def stream(

@@ -15,6 +15,10 @@ from sqlalchemy.ext.asyncio import (
 from jarvis.config import settings
 from jarvis.core.logger import log
 from jarvis.database.models import Base
+from jarvis.database.schema_agent_memory import (
+    AGENT_MEMORY_INDEXES,
+    AGENT_MEMORY_SCHEMA,
+)
 from jarvis.database.schema_memory import (
     MEMORY_INDEXES,
     MEMORY_SCHEMA,
@@ -55,6 +59,10 @@ class DatabaseManager:
                 connection
             )
 
+            await self.create_agent_memory_tables(
+                connection
+            )
+
         self.started = True
 
         log.info("Database connected")
@@ -68,6 +76,19 @@ class DatabaseManager:
         )
 
         for sql in MEMORY_INDEXES:
+            await connection.exec_driver_sql(
+                sql
+            )
+
+    async def create_agent_memory_tables(
+        self,
+        connection: AsyncConnection,
+    ) -> None:
+        await connection.exec_driver_sql(
+            AGENT_MEMORY_SCHEMA
+        )
+
+        for sql in AGENT_MEMORY_INDEXES:
             await connection.exec_driver_sql(
                 sql
             )

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from jarvis.core.container import container
 from jarvis.planner.capability_reliability import CapabilityReliabilityService
@@ -60,6 +62,7 @@ class SystemSkill(Skill):
                 "system.ping",
                 "system.health",
                 "system.version",
+                "system.datetime", 
                 "system.execution_history",
                 "system.execution_detail",
                 "system.execution_diagnostics",
@@ -90,6 +93,14 @@ class SystemSkill(Skill):
             CapabilityDefinition(
                 name="system.version",
                 description="Get the current JarvisAI version.",
+            ),
+            CapabilityDefinition(
+                name="system.datetime",
+                description=(
+                    "Get the current local date and time. "
+                    "Use this for questions asking what time it is, "
+                    "the current date, today, or the current day."
+                ),
             ),
             CapabilityDefinition(
                 name="system.execution_history",
@@ -162,6 +173,9 @@ class SystemSkill(Skill):
 
         if command == "system.version":
             return {"jarvis": __version__}
+
+        if command == "system.datetime":
+            return self._current_datetime()
 
         if command == "system.health":
             return await self.health()
@@ -440,6 +454,21 @@ class SystemSkill(Skill):
             "total": anomalies.total,
             "critical": anomalies.critical,
             "warnings": anomalies.warnings,
+        }
+
+    @staticmethod
+    def _current_datetime() -> dict[str, Any]:
+        timezone_name = "Asia/Bangkok"
+        now = datetime.now(
+            ZoneInfo(timezone_name)
+        )
+
+        return {
+            "timezone": timezone_name,
+            "iso": now.isoformat(),
+            "date": now.date().isoformat(),
+            "time": now.strftime("%H:%M:%S"),
+            "weekday": now.strftime("%A"),
         }
 
     @staticmethod

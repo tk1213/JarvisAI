@@ -3,6 +3,7 @@ from __future__ import annotations
 from jarvis.memory.capture import MemoryCaptureService
 from jarvis.memory.commands import MemoryCommandService
 from jarvis.memory.context import MemoryContextBuilder
+from jarvis.memory.coordination import ConversationAgentMemoryCoordinator
 from jarvis.services.ai_service import AIService
 from jarvis.services.conversation_manager import ConversationManager
 from jarvis.services.memory_service import (
@@ -25,6 +26,7 @@ class MemoryAwareConversationManager(
         memory_capture: MemoryCaptureService,
         memory_context: MemoryContextBuilder,
         memory_commands: MemoryCommandService,
+        memory_coordinator: ConversationAgentMemoryCoordinator | None = None,
     ) -> None:
         super().__init__(
             ai=ai,
@@ -36,10 +38,13 @@ class MemoryAwareConversationManager(
         self._memory_capture = memory_capture
         self._memory_context = memory_context
         self._memory_commands = memory_commands
+        self._memory_coordinator = memory_coordinator
 
     async def ask(
         self,
         text: str,
+        *,
+        voice_mode: bool = False,
     ) -> str:
         command_reply = await self._memory_commands.handle(
             text
@@ -54,7 +59,8 @@ class MemoryAwareConversationManager(
             return command_reply
 
         reply = await super().ask(
-            text
+            text,
+            voice_mode=voice_mode,
         )
 
         if reply:
@@ -67,14 +73,24 @@ class MemoryAwareConversationManager(
     async def _ask_ai(
         self,
         text: str,
+        *,
+        voice_mode: bool = False,
     ) -> str:
-        memory_context = await self._memory_context.build(
-            text
-        )
+        if self._memory_coordinator is not None:
+            coordinated = await self._memory_coordinator.build(
+                text
+            )
+
+            memory_context = coordinated.text
+        else:
+            memory_context = await self._memory_context.build(
+                text
+            )
 
         if not memory_context:
             return await super()._ask_ai(
-                text
+                text,
+                voice_mode=voice_mode,
             )
 
         enriched_text = (
@@ -84,5 +100,6 @@ class MemoryAwareConversationManager(
         )
 
         return await super()._ask_ai(
-            enriched_text
+            enriched_text,
+            voice_mode=voice_mode,
         )

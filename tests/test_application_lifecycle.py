@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -15,6 +16,45 @@ def clean_container():
     yield
 
     container.clear()
+
+
+
+@asynccontextmanager
+async def empty_database_session():
+    session = AsyncMock()
+
+    list_result = Mock()
+    list_mappings = Mock()
+    list_mappings.all.return_value = []
+    list_result.mappings.return_value = list_mappings
+
+    count_result = Mock()
+    count_mappings = Mock()
+    count_mappings.first.return_value = {
+        "total": 0,
+    }
+    count_result.mappings.return_value = count_mappings
+
+    async def execute(
+        statement,
+        parameters=None,
+    ):
+        del parameters
+
+        sql = str(
+            statement
+        ).upper()
+
+        if "COUNT(*)" in sql:
+            return count_result
+
+        return list_result
+
+    session.execute = AsyncMock(
+        side_effect=execute
+    )
+
+    yield session
 
 
 @pytest.mark.asyncio
@@ -57,6 +97,7 @@ async def test_database_is_shutdown_when_later_startup_fails() -> None:
     database = Mock()
     database.startup = AsyncMock()
     database.shutdown = AsyncMock()
+    database.session = empty_database_session
 
     smart_home = Mock()
     smart_home.connect = AsyncMock(

@@ -10,3 +10,4 @@ sounddevice
 numpy
 soundfile
 scipy
+tzdata

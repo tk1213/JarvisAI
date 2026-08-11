@@ -1,192 +1,135 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from typing import Any
 
-import sounddevice as sd
+from jarvis.audio.device_selection import (
+    AudioDeviceCatalog,
+    AudioDeviceInfo,
+    AudioDeviceKind,
+    AudioDeviceSelection,
+)
+
+
+@dataclass(slots=True, frozen=True)
+class AudioManagerSnapshot:
+    input_device: AudioDeviceInfo
+    output_device: AudioDeviceInfo
 
 
 class AudioManager:
-    def __init__(self) -> None:
-        self.channels = 1
+    """Production audio-device manager with explicit and automatic selection."""
 
-        self.input_device = self._find_best_input()
-        self.output_device = self._find_best_output()
+    def __init__(
+        self,
+        *,
+        sounddevice_module: Any | None = None,
+        input_device: int | None = None,
+        output_device: int | None = None,
+    ) -> None:
+        if sounddevice_module is None:
+            import sounddevice as sounddevice_module
 
-        input_info = sd.query_devices(
-            self.input_device,
-            kind="input",
-        )
+        self._sounddevice = sounddevice_module
+        self._catalog = self._build_catalog()
 
-        self.sample_rate = int(
-            input_info["default_samplerate"]
-        )
+        automatic = self._catalog.select()
 
-        sd.default.device = (
-            self.input_device,
-            self.output_device,
-        )
-
-    def devices(self) -> Any:
-        return sd.query_devices()
-
-    def hostapis(self) -> Any:
-        return sd.query_hostapis()
-
-    def _find_best_input(self) -> int:
-        devices = self.devices()
-        hostapis = self.hostapis()
-
-        api_priorities = (
-            "Windows WASAPI",
-            "Windows DirectSound",
-            "MME",
-            "Windows WDM-KS",
-        )
-
-        preferred_names = (
-            "rode",
-            "microphone",
-            "mic",
-        )
-
-        excluded_names = (
-            "stereo mix",
-            "line in",
-            "sound mapper",
-            "primary sound capture",
-        )
-
-        for api_name in api_priorities:
-            for preferred_name in preferred_names:
-                for index, device in enumerate(devices):
-                    if int(device["max_input_channels"]) <= 0:
-                        continue
-
-                    device_name = str(device["name"]).lower()
-                    host_name = str(
-                        hostapis[device["hostapi"]]["name"]
-                    )
-
-                    if host_name != api_name:
-                        continue
-
-                    if any(
-                        excluded in device_name
-                        for excluded in excluded_names
-                    ):
-                        continue
-
-                    if preferred_name in device_name:
-                        return index
-
-        for index, device in enumerate(devices):
-            if int(device["max_input_channels"]) <= 0:
-                continue
-
-            device_name = str(device["name"]).lower()
-
-            if any(
-                excluded in device_name
-                for excluded in excluded_names
-            ):
-                continue
-
-            return index
-
-        raise RuntimeError(
-            "No usable microphone input device found."
-        )
-
-    def _find_best_output(self) -> int:
-        devices = self.devices()
-        hostapis = self.hostapis()
-
-        api_priorities = (
-            "Windows WASAPI",
-            "Windows DirectSound",
-            "MME",
-            "Windows WDM-KS",
-        )
-
-        preferred_names = (
-            "speakers",
-            "headphones",
-            "realtek",
-        )
-
-        excluded_names = (
-            "digital output",
-            "spdif",
-            "display audio",
-        )
-
-        for api_name in api_priorities:
-            for preferred_name in preferred_names:
-                for index, device in enumerate(devices):
-                    if int(device["max_output_channels"]) <= 0:
-                        continue
-
-                    device_name = str(device["name"]).lower()
-                    host_name = str(
-                        hostapis[device["hostapi"]]["name"]
-                    )
-
-                    if host_name != api_name:
-                        continue
-
-                    if any(
-                        excluded in device_name
-                        for excluded in excluded_names
-                    ):
-                        continue
-
-                    if preferred_name in device_name:
-                        return index
-
-        for index, device in enumerate(devices):
-            if int(device["max_output_channels"]) > 0:
-                return index
-
-        raise RuntimeError(
-            "No usable output device found."
-        )
-
-    def print_devices(self) -> None:
-        devices = self.devices()
-        hostapis = self.hostapis()
-
-        print("=" * 100)
-
-        for index, device in enumerate(devices):
-            host_name = hostapis[
-                device["hostapi"]
-            ]["name"]
-
-            print(
-                f"[{index}] {device['name']} | "
-                f"API={host_name} | "
-                f"IN={device['max_input_channels']} | "
-                f"OUT={device['max_output_channels']} | "
-                f"RATE={device['default_samplerate']}"
+        self._input = (
+            self._catalog.get(
+                input_device,
+                kind=AudioDeviceKind.INPUT,
             )
-
-        print("=" * 100)
-
-        input_info = sd.query_devices(
-            self.input_device,
-            kind="input",
+            if input_device is not None
+            else automatic.input_device
+        )
+        self._output = (
+            self._catalog.get(
+                output_device,
+                kind=AudioDeviceKind.OUTPUT,
+            )
+            if output_device is not None
+            else automatic.output_device
         )
 
-        output_info = sd.query_devices(
-            self.output_device,
-            kind="output",
+    @property
+    def input_device(self) -> int:
+        return self._input.index
+
+    @property
+    def output_device(self) -> int:
+        return self._output.index
+
+    @property
+    def input_info(self) -> AudioDeviceInfo:
+        return self._input
+
+    @property
+    def output_info(self) -> AudioDeviceInfo:
+        return self._output
+
+    @property
+    def selection(self) -> AudioDeviceSelection:
+        return AudioDeviceSelection(
+            input_device=self._input,
+            output_device=self._output,
         )
 
-        print(
-            f"Selected Input : [{self.input_device}] "
-            f"{input_info['name']}"
+    @property
+    def snapshot(self) -> AudioManagerSnapshot:
+        return AudioManagerSnapshot(
+            input_device=self._input,
+            output_device=self._output,
         )
-        print(
-            f"Selected Output: [{self.output_device}] "
-            f"{output_info['name']}"
+
+    def refresh(self) -> AudioManagerSnapshot:
+        self._catalog = self._build_catalog()
+
+        self._input = self._catalog.get(
+            self._input.index,
+            kind=AudioDeviceKind.INPUT,
         )
-        print(f"Sample Rate   : {self.sample_rate}")
-        print(f"Channels      : {self.channels}")
+        self._output = self._catalog.get(
+            self._output.index,
+            kind=AudioDeviceKind.OUTPUT,
+        )
+
+        return self.snapshot
+
+    def select_input(
+        self,
+        device_index: int,
+    ) -> AudioDeviceInfo:
+        self._input = self._catalog.get(
+            device_index,
+            kind=AudioDeviceKind.INPUT,
+        )
+        return self._input
+
+    def select_output(
+        self,
+        device_index: int,
+    ) -> AudioDeviceInfo:
+        self._output = self._catalog.get(
+            device_index,
+            kind=AudioDeviceKind.OUTPUT,
+        )
+        return self._output
+
+    def input_devices(
+        self,
+    ) -> tuple[AudioDeviceInfo, ...]:
+        return self._catalog.input_devices()
+
+    def output_devices(
+        self,
+    ) -> tuple[AudioDeviceInfo, ...]:
+        return self._catalog.output_devices()
+
+    def _build_catalog(
+        self,
+    ) -> AudioDeviceCatalog:
+        return AudioDeviceCatalog.from_sounddevice(
+            devices=self._sounddevice.query_devices(),
+            hostapis=self._sounddevice.query_hostapis(),
+        )

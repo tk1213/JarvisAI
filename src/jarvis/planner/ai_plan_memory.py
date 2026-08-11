@@ -178,6 +178,31 @@ class AIPlanMemoryStore:
             )
         )
 
+    def load_records(
+        self,
+        records: tuple[AIPlanMemoryRecord, ...],
+        *,
+        replace: bool = True,
+    ) -> None:
+        if replace:
+            self._records.clear()
+
+        self._records.extend(
+            records
+        )
+
+        overflow = (
+            len(
+                self._records
+            )
+            - self._max_records
+        )
+
+        if overflow > 0:
+            del self._records[
+                :overflow
+            ]
+
     def clear(
         self,
     ) -> None:

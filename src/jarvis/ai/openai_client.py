@@ -39,8 +39,8 @@ class OpenAIClient(BaseAI):
 
         self.client = AsyncOpenAI(
             api_key=api_key,
-            timeout=60.0,
-            max_retries=2,
+            timeout=settings.openai_timeout_seconds,
+            max_retries=settings.openai_max_retries,
         )
 
     def _build_conversation(
@@ -67,17 +67,56 @@ class OpenAIClient(BaseAI):
 
         return conversation
 
+    @staticmethod
+    def _build_instructions(
+        *,
+        voice_mode: bool,
+    ) -> str:
+        instructions = prompt_manager.load(
+            "system"
+        )
+
+        if not voice_mode:
+            return instructions
+
+        voice_instructions = (
+            "\n\n"
+            "Voice response mode:\n"
+            "- This response will be spoken aloud.\n"
+            "- Default to ONE very short sentence.\n"
+            "- Give the answer immediately.\n"
+            "- For recommendations, give only ONE best recommendation.\n"
+            "- Do not explain why unless the user asks why.\n"
+            "- Do not add benefits, reasons, examples, or alternatives "
+            "unless requested.\n"
+            "- Do not repeat or paraphrase the user's message.\n"
+            "- Avoid filler and conversational padding.\n"
+            "- Do not use Markdown, headings, bullet lists, tables, or emojis.\n"
+            "- Use additional sentences only when necessary for correctness "
+            "or safety.\n"
+            "- If the user explicitly asks for details, steps, options, "
+            "or an explanation, provide the necessary detail.\n"
+            "- Never omit important safety information for brevity."
+        )
+        
+
+        return instructions + voice_instructions
+
     async def chat(
         self,
         message: str,
         history: list[dict[str, str]] | None = None,
+        *,
+        voice_mode: bool = False,
     ) -> str:
         conversation = self._build_conversation(
             message=message,
             history=history,
         )
 
-        instructions = prompt_manager.load("system")
+        instructions = self._build_instructions(
+            voice_mode=voice_mode,
+        )
 
         try:
             log.info(
