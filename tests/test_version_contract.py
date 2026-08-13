@@ -5,8 +5,8 @@ from jarvis.version import (
 )
 
 
-def test_version_matches_sprint_6_release() -> None:
-    assert __version__ == "0.6.0-alpha.1"
+def test_version_matches_current_release() -> None:
+    assert __version__ == "0.7.0-alpha.1"
 
 
 def test_get_version_returns_current_version() -> None:

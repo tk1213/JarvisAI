@@ -1,83 +1,234 @@
-# JarvisAI 0.6.0-alpha.1
+JarvisAI 0.7.0-alpha.1
 
-## Sprint 6 - Voice Runtime Reliability
+Sprint 7 - Tuya Smart Home Reliability
 
-JarvisAI 0.6.0-alpha.1 establishes the validated Sprint 6
-production voice-runtime baseline.
+JarvisAI 0.7.0-alpha.1 establishes the validated Sprint 7
+Tuya smart-home production baseline on top of the Sprint 6
+voice-runtime reliability baseline.
 
-## Highlights
+Release Summary
 
-- wake-word activation boundary
-- wake acknowledgement before command capture
-- post-acknowledgement command handoff
-- continuous wake-activated assistant runtime
-- silent-command rejection
-- wake re-arm after silent turns
-- STT prompt-echo protection
-- VAD-based speech capture
-- explicit audio input/output selection
-- shared AudioManager integration
-- TTS acknowledgement and reply playback
-- session state transitions
-- cancellation propagation and diagnostics
-- bounded continuous runtime execution
-- conversation and agent runtime integration
+Sprint 7 focused on hardening the existing Tuya smart-home path
+rather than adding new providers or unrelated features.
 
-## Reliability
+Validated production path:
 
-Sprint 6 added and validated:
+JarvisAI
+-> SmartHomeService
+-> TuyaAdapter
+-> Tuya Cloud
+-> Physical Smart Device
+-> State Verification
 
-- wake transition stage tracking
-- full-turn stage tracking
-- cancellation-stage diagnostics
-- silent-turn recovery
-- no cancellation leakage between turns
-- bounded continuous assistant execution
-- long-running voice runtime validation
+Highlights
 
-## Automated Validation
+production Tuya Cloud configuration
 
-Sprint 6 closeout:
+provider selection through SMART_HOME_PROVIDER
 
-```text
+Tuya credential handling
+
+configurable Tuya endpoint
+
+Tuya Cloud authentication
+
+access-token acquisition
+
+HMAC-SHA256 request signing
+
+canonical query handling
+
+JSON body hashing
+
+signed request headers
+
+real device discovery
+
+device metadata mapping
+
+device status retrieval
+
+online-state mapping
+
+power-state mapping
+
+switch datapoint resolution
+
+ON/OFF/toggle execution
+
+post-command status verification
+
+bounded verification retries
+
+connection and disconnect lifecycle
+
+cancellation propagation
+
+network, HTTP, and Tuya API failure propagation
+
+Tuya Contract Validation
+
+Dedicated Tuya adapter contract coverage reached:
+
+73 passed
+
+Coverage includes authentication, signing, discovery, status,
+device mapping, power commands, verification, failure propagation,
+connection lifecycle, and cancellation semantics.
+
+Smart Home Regression
+
+Focused smart-home regression:
+
+104 passed
+
+Validated test set:
+
+tests/test_tuya_adapter_contract.py
+tests/test_smart_home.py
+tests/test_smart_home_capability_integration.py
+tests/test_smart_home_skill.py
+tests/test_smart_home_text_normalizer.py
+
+Full Regression
+
+Sprint 7 full regression:
+
+882 passed
+
+Static gates:
+
 Compile: PASS
 Ruff: PASS
-Focused Sprint 6 regression: PASS
+Smart Home regression: PASS
 Full regression: PASS
-806 tests passed
-```
 
-## Live Validation
+Tuya Read-Only Live Validation
 
-Validated on the production Windows audio path:
+Live gate:
 
-- real wake-word detection
-- acknowledgement playback
-- microphone command capture
-- real STT
-- conversation execution
-- TTS reply playback
-- silent command rejection
-- wake re-arm after silence
-- successful next-turn execution
-- cancellation behavior
-- 10-turn continuous runtime soak test
+python tools/test_tuya_readonly_live.py
 
-## Release Checkpoint
+Validated:
 
-```text
-Version: 0.6.0-alpha.1
-Git tag: v0.6.0-alpha.1
-Commit: b1b2bc0
-```
+Tuya Cloud connection
 
-Python packaging may display the PEP 440 normalized form:
+authentication
 
-```text
-0.6.0a1
-```
+real device discovery
 
-## Next
+online-state retrieval
 
-Sprint 7 planning begins from this validated baseline.
-Its feature scope is not yet defined by this release note.
+device-status retrieval
+
+switch datapoint retrieval
+
+clean disconnect
+
+Result:
+
+Tuya read-only live gate: PASS
+
+Controlled Physical Power Validation
+
+Live gate:
+
+python tools/test_tuya_power_control_live.py
+
+The gate requires explicit confirmation before changing physical state.
+
+Validated flow:
+
+Initial state: OFF
+Requested state: ON
+Changed state verified: ON
+Original state restored: OFF
+Restore verified: PASS
+
+Final result:
+
+Power transition: PASS
+Power restore: PASS
+Tuya controlled power live gate: PASS
+
+Safety
+
+The physical-device live gate records the original state before
+testing and restores that original state before successful completion.
+
+Side-effect operations continue to require explicit confirmation.
+
+Failure and Cancellation Semantics
+
+Current Tuya behavior includes:
+
+network errors propagate
+
+HTTP errors propagate
+
+malformed JSON errors propagate
+
+Tuya success=false responses fail explicitly
+
+unsupported power datapoints fail explicitly
+
+post-command verification is bounded
+
+cancellation is propagated rather than swallowed
+
+Configuration
+
+Example provider configuration:
+
+SMART_HOME_PROVIDER=mock
+
+Production Tuya configuration:
+
+SMART_HOME_PROVIDER=tuya
+TUYA_ACCESS_ID=
+TUYA_ACCESS_KEY=
+TUYA_ENDPOINT=
+
+Real credentials belong only in the local .env.
+
+Release Checkpoint
+
+Version : 0.7.0-alpha.1
+Git tag : v0.7.0-alpha.1
+Commit  : 6825df0
+
+Python packaging may display:
+
+0.7.0a1
+
+Previous Validated Baseline
+
+Sprint 6 established the wake-word and continuous voice-runtime
+reliability baseline:
+
+Version : 0.6.0-alpha.1
+Git tag : v0.6.0-alpha.1
+Commit  : b1b2bc0
+
+Sprint 7 builds on that validated voice-runtime baseline.
+
+Current Quality Baseline
+
+Compile validation          : PASS
+Ruff                        : PASS
+Tuya adapter contract       : 73 passed
+Smart Home regression       : 104 passed
+Full regression             : 882 passed
+Tuya read-only live gate    : PASS
+Tuya physical control gate  : PASS
+Original-state restoration  : PASS
+
+Next Milestone
+
+Sprint 8 begins from the validated v0.7.0-alpha.1 baseline.
+
+Sprint 8 scope has not yet been fixed.
+
+No Sprint 8 feature should be considered complete until its
+implementation, automated regression, documentation, and relevant
+live validation have passed.

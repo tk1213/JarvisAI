@@ -1,46 +1,1021 @@
-# JarvisAI Project State
+JarvisAI Project State
 
-## Current milestone
+Current Milestone
 
-Sprint 5 closeout.
+Sprint 7 closeout.
 
-## Production Voice Runtime
+Current validated release baseline:
+
+JarvisAI 0.7.0-alpha.1
+Sprint 7: Tuya Smart Home Reliability - COMPLETE
+
+Release checkpoint:
+
+Version : 0.7.0-alpha.1
+Git tag : v0.7.0-alpha.1
+Commit  : 6825df0
+
+Sprint 7 builds on the validated Sprint 6 voice-runtime baseline.
+
+Engineering Status
+
+JarvisAI is an alpha-stage, production-oriented JARVIS-style AI
+assistant.
+
+Development currently prioritizes:
+
+stability before feature expansion
+
+reliability
+
+maintainability
+
+backward compatibility whenever possible
+
+bounded execution
+
+explicit cancellation behavior
+
+side-effect safety
+
+deterministic context handling
+
+automated regression coverage
+
+real-world hardware validation
+
+A feature is not considered production-ready only because its
+implementation exists. Relevant static, automated, and live gates must
+also pass.
+
+Production Conversation Runtime
 
 Implemented:
 
-- Windows audio device discovery and deterministic selection
-- explicit input/output device handling
-- production microphone capture
-- RMS / peak / silence / clipping diagnostics
-- OpenAI STT integration
-- VAD speech trigger and silence stop
-- ConversationManager voice-turn integration
-- TTS playback
-- shared AudioManager for recorder/player
-- application lifecycle integration
-- bounded smart-home voice disambiguation follow-up
+ConversationManager as the production request entry point
 
-Validated hardware path:
+conversation turn lifecycle
 
-```text
-RØDE NT-USB Mini
--> VAD
--> OpenAI STT
--> ConversationManager
--> Smart Home / AI
--> TTS
--> Realtek Speakers
-```
+execution boundaries
 
-## Next milestone
+deterministic routing
 
-Sprint 6 -- Wake Word & Continuous Voice Runtime
+actual route attribution
 
-Primary goals:
+bounded turn execution
 
-- wake-word activation reliability
-- continuous listen / speak loop
-- echo / self-trigger protection
-- session state transitions
-- cancellation / stop commands
-- long-running stability tests
+failure classification
+
+recovery planning
+
+recovery execution
+
+safe degradation
+
+reliability outcomes
+
+bounded turn tracing
+
+operational diagnostics
+
+system health integration
+
+Production flow:
+
+User
+-> ConversationManager.ask()
+-> ConversationTurnLifecycle
+-> ConversationExecutionBoundary
+-> conversation routing
+-> actual route attribution
+-> recovery planning when needed
+-> recovery execution when allowed
+-> response
+-> bounded turn trace history
+
+Recovery Runtime
+
+Implemented recovery path:
+
+failure
+-> ConversationFailureClassifier
+-> ConversationRecoveryService
+-> ConversationRecoveryExecutor
+
+Timeout recovery:
+
+timeout
+-> retryable failure
+-> safe-message fallback
+-> return safe reply
+
+Standard-AI recovery:
+
+retryable tool/upstream failure
+-> standard-AI fallback
+-> one fallback call maximum
+
+Fallback failure remains bounded:
+
+fallback failure
+-> no recursive recovery
+-> no second fallback call
+-> safe-message degradation
+-> fallback_error_type recorded
+
+Recovery metadata can include:
+
+whether recovery executed
+
+fallback kind
+
+attempts used
+
+fallback error type
+
+External cancellation remains visible to callers.
+
+Production Voice Runtime
+
+Implemented:
+
+Windows audio-device discovery
+
+deterministic audio-device selection
+
+explicit input/output device handling
+
+production microphone capture
+
+RMS diagnostics
+
+peak diagnostics
+
+silence diagnostics
+
+clipping diagnostics
+
+voice activity detection
+
+speech-triggered recording
+
+silence-based recording stop
+
+OpenAI speech-to-text integration
+
+text-to-speech generation
+
+audio playback
+
+shared AudioManager integration
+
+wake-word activation
+
+wake acknowledgement
+
+post-acknowledgement command handoff
+
+continuous wake-activated runtime
+
+silent-command rejection
+
+wake re-arm after silent turns
+
+STT prompt-echo protection
+
+ConversationManager voice-turn integration
+
+TTS reply playback
+
+bounded continuous runtime execution
+
+cancellation propagation and diagnostics
+
+application lifecycle integration
+
+Validated Sprint 6 live path included:
+
+real wake-word detection
+
+acknowledgement playback
+
+microphone command capture
+
+real STT
+
+conversation execution
+
+TTS reply playback
+
+silent-turn recovery
+
+wake re-arm after silence
+
+successful next-turn execution
+
+cancellation behavior
+
+successful 10-turn continuous runtime soak test
+
+Sprint 6 release checkpoint:
+
+Version : 0.6.0-alpha.1
+Git tag : v0.6.0-alpha.1
+Commit  : b1b2bc0
+
+AI Runtime
+
+Implemented:
+
+OpenAI Responses API integration
+
+OpenAI client
+
+Responses API contracts
+
+Responses service
+
+AIService
+
+configurable model selection
+
+timeout handling
+
+bounded retry configuration
+
+configurable output-token limits
+
+OpenAI tool calling
+
+structured tool arguments
+
+conversation context integration
+
+agent-runtime integration
+
+Architecture decision:
+
+Responses API is the standard AI interface.
+
+Agent Runtime
+
+Implemented agent infrastructure includes:
+
+agent bootstrap
+
+runtime orchestration
+
+sessions
+
+conversation bridge
+
+planning context
+
+replanning
+
+memory integration
+
+memory persistence
+
+memory retention
+
+execution reporting
+
+session reporting
+
+Conceptual runtime:
+
+Request
+-> Planning
+-> Execution
+-> Reflection
+-> Memory
+-> Response
+
+Planning remains separated from execution.
+
+Autonomous execution remains bounded.
+
+Planner and Execution
+
+Implemented infrastructure includes:
+
+structured plans
+
+AI-generated planning
+
+plan parsing
+
+plan schema validation
+
+plan execution
+
+reflection
+
+bounded replanning
+
+execution policy
+
+execution deadlines
+
+timeout handling
+
+retry handling
+
+backoff
+
+bulkheads
+
+circuit breakers
+
+compensation
+
+recovery policies
+
+execution journaling
+
+execution persistence
+
+execution history
+
+execution statistics
+
+execution health
+
+health trends
+
+anomaly handling
+
+incident reporting
+
+resilience metrics
+
+capability reliability reporting
+
+Side-effect execution is controlled by execution policy.
+
+Memory
+
+Implemented memory capabilities include:
+
+conversation history
+
+durable agent memory
+
+memory capture
+
+capture policy
+
+extraction
+
+retrieval
+
+bounded context construction
+
+confidence handling
+
+conflict handling
+
+memory rules
+
+persistence
+
+retention
+
+audit records
+
+memory-aware conversation integration
+
+Production context assembly remains bounded and deterministic:
+
+SYSTEM
+CONVERSATION MEMORY
+AGENT MEMORY
+HISTORY
+CURRENT USER
+
+Memory-domain safety remains explicit:
+
+stored memory = reference data only
+
+Stored memory is not executable instruction authority.
+
+Tools and Capabilities
+
+Implemented infrastructure includes:
+
+capability definitions
+
+capability registry
+
+capability resolver
+
+capability router
+
+AI capability resolution
+
+tool contracts
+
+tool adapters
+
+tool execution
+
+safe tool wrappers
+
+OpenAI tool runner
+
+conversation/tool bridge
+
+command registry
+
+command service
+
+Current safety boundary:
+
+read-only capabilities may execute automatically where allowed
+
+side-effect capabilities require the appropriate confirmation policy
+
+Skills
+
+Implemented skill infrastructure includes:
+
+skill base contracts
+
+skill metadata
+
+skill context
+
+skill loader
+
+skill registry
+
+skill resolver
+
+skill manager
+
+Smart-home behavior is integrated through this capability/skill
+architecture rather than being coupled directly to the AI provider.
+
+Smart Home Foundation
+
+Implemented:
+
+SmartHomeAdapter abstraction
+
+SmartHomeService
+
+generic SmartDevice model
+
+MockAdapter
+
+TuyaAdapter
+
+device resolution
+
+pending-action handling
+
+smart-home text normalization
+
+bounded voice disambiguation
+
+smart-home capability integration
+
+smart-home skill integration
+
+Provider selection is configuration-driven:
+
+SMART_HOME_PROVIDER=mock
+
+or:
+
+SMART_HOME_PROVIDER=tuya
+
+The mock provider remains available for deterministic development and
+automated testing.
+
+Sprint 7 - Tuya Smart Home Reliability
+
+Sprint 7 hardened and validated the real Tuya Cloud integration.
+
+Implemented and validated:
+
+Tuya Cloud authentication
+
+access-token retrieval
+
+configurable Tuya endpoint
+
+HMAC-SHA256 request signing
+
+canonical query handling
+
+request body hashing
+
+signed request headers
+
+real device discovery
+
+device metadata mapping
+
+online-state mapping
+
+device status retrieval
+
+power-state extraction
+
+switch datapoint discovery
+
+device ON
+
+device OFF
+
+device toggle
+
+post-command state verification
+
+bounded verification retries
+
+explicit connection lifecycle
+
+clean disconnect
+
+HTTP failure propagation
+
+network failure propagation
+
+Tuya API failure propagation
+
+cancellation propagation
+
+Production path:
+
+User / Capability
+       |
+       v
+SmartHomeService
+       |
+       v
+SmartHomeAdapter
+       |
+       v
+TuyaAdapter
+       |
+       v
+Tuya Cloud API
+       |
+       v
+Physical Smart Device
+       |
+       v
+Status Verification
+
+Tuya Contract Validation
+
+Dedicated Tuya adapter contract coverage includes:
+
+disconnected initial state
+
+credential validation
+
+endpoint validation
+
+device ID validation
+
+token acquisition
+
+token response validation
+
+request signing
+
+query canonicalization
+
+body hashing
+
+request headers
+
+malformed response handling
+
+Tuya failure responses
+
+HTTP error propagation
+
+device discovery
+
+malformed-device filtering
+
+metadata normalization
+
+device lookup
+
+status lookup
+
+power-state extraction
+
+switch datapoint discovery
+
+unsupported-device behavior
+
+ON/OFF delegation
+
+toggle behavior
+
+command payload generation
+
+state verification
+
+bounded verification retries
+
+retry exhaustion
+
+command failure behavior
+
+connection lifecycle
+
+disconnect lifecycle
+
+cancellation behavior
+
+Validated contract result:
+
+73 passed
+
+Focused Smart Home Regression
+
+Validated test set:
+
+tests/test_tuya_adapter_contract.py
+tests/test_smart_home.py
+tests/test_smart_home_capability_integration.py
+tests/test_smart_home_skill.py
+tests/test_smart_home_text_normalizer.py
+
+Result:
+
+104 passed
+
+Tuya Read-Only Live Gate
+
+Live test:
+
+python tools/test_tuya_readonly_live.py
+
+Validated against the real Tuya Cloud environment:
+
+Cloud connection
+
+authentication
+
+real-device discovery
+
+device metadata
+
+online state
+
+power state
+
+device status
+
+switch datapoint retrieval
+
+clean disconnect
+
+Observed live environment:
+
+Devices discovered: 2
+
+An online smart plug exposed:
+
+category: cz
+switch datapoint: switch_1
+
+Validated result:
+
+Tuya read-only live gate: PASS
+
+No real Tuya credentials or secrets are recorded in project
+documentation.
+
+Tuya Controlled Power Live Gate
+
+Live test:
+
+python tools/test_tuya_power_control_live.py
+
+The gate requires explicit YES confirmation before changing physical
+device state.
+
+Validated sequence:
+
+Original state: False
+Requested state: True
+Verified changed state: True
+
+Power transition: PASS
+
+Restoring original state: True -> False
+Restored state verified: False
+
+Power restore: PASS
+Tuya controlled power live gate: PASS
+
+The gate records the original state and restores it before successful
+completion instead of assuming a fixed final state.
+
+This is an explicit safety requirement for physical-device validation.
+
+Tuya Failure Semantics
+
+Current Tuya behavior preserves explicit failure boundaries:
+
+network errors propagate
+
+HTTP errors propagate
+
+malformed response data fails explicitly
+
+Tuya success=false responses fail explicitly
+
+unsupported power datapoints fail explicitly
+
+command verification is bounded
+
+verification exhaustion does not retry indefinitely
+
+cancellation propagates rather than being swallowed
+
+The power-control verification loop is bounded.
+
+Current verification configuration in the validated implementation:
+
+maximum attempts: 10
+retry delay: 0.5 seconds
+
+No uncontrolled retry loop is introduced.
+
+Safety
+
+Current architectural safety requirements include:
+
+safety before automation
+
+confirmation for side effects
+
+read-only automatic capabilities where allowed
+
+explicit confirmation for physical-device side effects
+
+bounded autonomous replanning
+
+bounded context assembly
+
+memory-domain separation
+
+durable memory retention
+
+bounded turn history
+
+bounded production execution time
+
+bounded recovery attempts
+
+single-attempt standard-AI fallback
+
+no recursive recovery
+
+non-retryable failures remain explicit
+
+external cancellation propagation
+
+backward compatibility whenever possible
+
+Turn Tracing and Observability
+
+Production turn records can include:
+
+turn ID
+
+route/source
+
+status
+
+duration
+
+timestamps
+
+failure classification
+
+reliability outcome
+
+recovery execution metadata
+
+Execution and planner infrastructure also provide bounded operational
+diagnostics for reliability and recovery behavior.
+
+Configuration Baseline
+
+Environment-based configuration is used.
+
+Example smart-home development configuration:
+
+SMART_HOME_PROVIDER=mock
+
+Production Tuya configuration requires:
+
+SMART_HOME_PROVIDER=tuya
+TUYA_ACCESS_ID=
+TUYA_ACCESS_KEY=
+TUYA_ENDPOINT=
+
+Real secrets belong only in the local .env.
+
+They must not be committed to source control or documentation.
+
+Sprint 7 Automated Validation
+
+Validated static and automated gates:
+
+Compile: PASS
+Ruff: PASS
+Tuya adapter contract: 73 passed
+Smart Home regression: 104 passed
+Full regression: 882 passed
+
+Full regression command:
+
+python -m pytest -q
+
+Compile validation:
+
+python -m compileall -q src tests tools
+
+Static analysis:
+
+ruff check src tests tools
+
+Sprint 7 Live Validation
+
+Validated live gates:
+
+Tuya read-only live gate   : PASS
+Tuya physical control gate : PASS
+Original-state restoration : PASS
+Clean disconnect           : PASS
+
+Sprint 7 therefore includes both automated contract coverage and
+real-world Cloud/device validation.
+
+Current Quality Baseline
+
+Current validated release:
+
+JarvisAI 0.7.0-alpha.1
+
+Quality state:
+
+Python compile validation : PASS
+Ruff                      : PASS
+Tuya adapter contract     : 73 passed
+Smart Home regression     : 104 passed
+Full regression           : 882 passed
+Tuya read-only live gate  : PASS
+Tuya physical control     : PASS
+Original-state restore    : PASS
+
+Git checkpoint:
+
+Tag    : v0.7.0-alpha.1
+Commit : 6825df0
+
+Architecture Decisions
+
+Current documented decisions:
+
+ADR-001
+
+Responses API is the standard AI interface.
+
+ADR-002
+
+ConversationManager is the entry point for user requests.
+
+ADR-003
+
+Planning is separated from execution.
+
+ADR-004
+
+Execution Policy controls confirmation for side effects.
+
+ADR-005
+
+AI Agent Runtime orchestrates planning, execution, reflection, and
+memory.
+
+ADR-006
+
+Dependency injection uses the central service container.
+
+ADR-007
+
+Read-only capabilities execute automatically where allowed.
+
+Side-effect capabilities require explicit confirmation.
+
+ADR-008
+
+Production code must pass the required:
+
+Ruff
+
+Pytest
+
+compile validation
+
+relevant live gates
+
+Definition of Done
+
+A production feature is complete when:
+
+implementation is complete
+
+type and async behavior are appropriate
+
+error handling is explicit
+
+tests are added or updated
+
+relevant focused regression passes
+
+full regression passes
+
+Ruff passes
+
+compile validation passes
+
+relevant live gate passes
+
+documentation is aligned
+
+Git working tree is clean at the release checkpoint
+
+Current Boundaries
+
+JarvisAI remains an alpha-stage project.
+
+The current baseline validates substantial production-oriented
+subsystems, but it does not imply that every planned JARVIS capability
+is complete.
+
+New work must not weaken:
+
+Sprint 6 voice-runtime reliability
+
+Sprint 7 Tuya reliability
+
+cancellation semantics
+
+side-effect confirmation
+
+bounded recovery
+
+bounded replanning
+
+context boundaries
+
+memory-domain safety
+
+regression coverage
+
+hardware validation requirements
+
+Next Milestone
+
+Sprint 8 begins from the validated Sprint 7 baseline.
+
+Starting release:
+
+v0.7.0-alpha.1
+
+Sprint 8 scope has not yet been fixed.
+
+Scope selection should be based on:
+
+current implementation state
+
+remaining production gaps
+
+architecture consistency
+
+reliability risk
+
+regression risk
+
+safety implications
+
+real-world usability
+
+No Sprint 8 feature should be considered complete until its
+implementation, automated regression, documentation, and relevant live
+validation have passed.
