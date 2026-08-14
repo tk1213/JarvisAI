@@ -12,6 +12,9 @@ from jarvis.services.assistant_runtime_service import (
     AssistantRuntimeService,
 )
 from jarvis.services.conversation_manager import ConversationManager
+from jarvis.services.health_contracts import (
+    HealthState,
+)
 from jarvis.services.memory_service import MemoryService
 from jarvis.version import __version__
 
@@ -30,9 +33,7 @@ async def _shutdown_application(
     )
 
     try:
-        await asyncio.shield(
-            shutdown_task
-        )
+        await asyncio.shield(shutdown_task)
 
     except asyncio.CancelledError:
         await shutdown_task
@@ -56,18 +57,9 @@ async def run() -> None:
         )
 
         print()
-        print(
-            "Environment : "
-            f"{settings.app_environment}"
-        )
-        print(
-            "Wake Word   : "
-            f"{settings.wake_word}"
-        )
-        print(
-            "Smart Home  : "
-            f"{settings.smart_home_provider}"
-        )
+        print(f"Environment : {settings.app_environment}")
+        print(f"Wake Word   : {settings.wake_word}")
+        print(f"Smart Home  : {settings.smart_home_provider}")
 
         print()
         print("System Ready.")
@@ -79,33 +71,23 @@ async def run() -> None:
         )
 
     except KeyboardInterrupt:
-        log.info(
-            "Keyboard interrupt received"
-        )
+        log.info("Keyboard interrupt received")
 
     except asyncio.CancelledError:
-        log.info(
-            "JarvisAI runtime cancelled"
-        )
+        log.info("JarvisAI runtime cancelled")
 
     except Exception:  # noqa: BLE001
-        log.exception(
-            "JarvisAI encountered an error"
-        )
+        log.exception("JarvisAI encountered an error")
 
     finally:
-        await _shutdown_application(
-            app
-        )
+        await _shutdown_application(app)
 
 
 async def chat() -> None:
     print("=" * 40)
     print("JarvisAI Interactive Chat")
     print("=" * 40)
-    print(
-        "Commands: exit, quit, clear, history, reload"
-    )
+    print("Commands: exit, quit, clear, history, reload")
     print()
 
     app = JarvisApplication()
@@ -130,10 +112,7 @@ async def chat() -> None:
             ConversationManager,
         )
 
-        print(
-            "Smart Home Provider: "
-            f"{settings.smart_home_provider}"
-        )
+        print(f"Smart Home Provider: {settings.smart_home_provider}")
         print()
 
         while True:
@@ -161,30 +140,22 @@ async def chat() -> None:
 
                 await memory.clear_messages()
 
-                print(
-                    "Jarvis: Conversation cleared."
-                )
+                print("Jarvis: Conversation cleared.")
                 print()
 
                 continue
 
             if command == "reload":
-                prompt_manager.reload(
-                    "system"
-                )
+                prompt_manager.reload("system")
 
-                print(
-                    "Jarvis: Prompt reloaded."
-                )
+                print("Jarvis: Prompt reloaded.")
                 print()
 
                 continue
 
             if command == "history":
-                messages = (
-                    await memory.get_recent_messages(
-                        limit=20,
-                    )
+                messages = await memory.get_recent_messages(
+                    limit=20,
                 )
 
                 print()
@@ -192,38 +163,23 @@ async def chat() -> None:
                 print("--------------------")
 
                 if not messages:
-                    print(
-                        "No conversation history."
-                    )
+                    print("No conversation history.")
 
                 for message in messages:
-                    speaker = (
-                        "You"
-                        if message.role == "user"
-                        else "Jarvis"
-                    )
+                    speaker = "You" if message.role == "user" else "Jarvis"
 
-                    print(
-                        f"{speaker}: "
-                        f"{message.content}"
-                    )
+                    print(f"{speaker}: {message.content}")
 
                 print()
 
                 continue
 
-            reply = await conversation.ask(
-                user_message
-            )
+            reply = await conversation.ask(user_message)
 
             if not reply:
-                reply = (
-                    "Jarvis did not return a response."
-                )
+                reply = "Jarvis did not return a response."
 
-            print(
-                f"Jarvis: {reply}"
-            )
+            print(f"Jarvis: {reply}")
             print()
 
     except EOFError:
@@ -239,19 +195,25 @@ async def chat() -> None:
         print("Chat cancelled.")
 
     except Exception:  # noqa: BLE001
-        log.exception(
-            "Jarvis chat error"
-        )
+        log.exception("Jarvis chat error")
 
         print()
-        print(
-            "Jarvis: An unexpected error occurred."
-        )
+        print("Jarvis: An unexpected error occurred.")
 
     finally:
-        await _shutdown_application(
-            app
-        )
+        await _shutdown_application(app)
+
+
+def _doctor_status_label(
+    state: HealthState,
+) -> str:
+    if state is HealthState.HEALTHY:
+        return "PASS"
+
+    if state is HealthState.DEGRADED:
+        return "WARN"
+
+    return "FAIL"
 
 
 async def doctor() -> bool:
@@ -264,77 +226,54 @@ async def doctor() -> bool:
     try:
         await app.start()
 
-        health = container.get(
-            "health"
-        )
+        health = container.get("health")
 
-        results = await health.check()
+        results = await health.operational_diagnostics()
 
         print()
 
-        for check_name, passed in results.items():
-            status = (
-                "PASS"
-                if passed
-                else "FAIL"
-            )
+        for check_name, result in results.items():
+            status = _doctor_status_label(result.state)
 
-            print(
-                f"[{status}] {check_name}"
-            )
+            print(f"[{status}] {check_name}")
 
-        healthy = all(
-            results.values()
-        )
+            if result.reason:
+                print(f"       Reason: {result.reason}")
+
+        healthy = all(result.passed for result in results.values() if result.critical)
 
         print()
 
         if healthy:
-            print(
-                "Overall Status: HEALTHY"
-            )
+            print("Overall Status: HEALTHY")
         else:
-            print(
-                "Overall Status: UNHEALTHY"
-            )
+            print("Overall Status: UNHEALTHY")
 
         return healthy
 
     except asyncio.CancelledError:
-        log.info(
-            "Jarvis doctor cancelled"
-        )
+        log.info("Jarvis doctor cancelled")
         return False
 
     except Exception:  # noqa: BLE001
-        log.exception(
-            "Jarvis doctor encountered an error"
-        )
+        log.exception("Jarvis doctor encountered an error")
 
         print()
-        print(
-            "Overall Status: ERROR"
-        )
+        print("Overall Status: ERROR")
 
         return False
 
     finally:
-        await _shutdown_application(
-            app
-        )
+        await _shutdown_application(app)
 
 
 def main() -> None:
     try:
-        asyncio.run(
-            run()
-        )
+        asyncio.run(run())
 
     except KeyboardInterrupt:
         print()
-        print(
-            "JarvisAI stopped by user."
-        )
+        print("JarvisAI stopped by user.")
 
 
 if __name__ == "__main__":
