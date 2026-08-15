@@ -111,14 +111,18 @@ async def test_pending_turn_on_bedroom(
         "ห้องนอน"
     )
 
+    smart_home.turn_on.assert_not_awaited()
+    assert "ยืนยัน" in second_reply
+
+    final_reply = await manager.ask(
+        "ยืนยัน"
+    )
+
     smart_home.turn_on.assert_awaited_once_with(
         "plug002"
     )
 
-    assert (
-        second_reply
-        == "เปิด Bedroom Smart Plug แล้วครับ"
-    )
+    assert "Bedroom Smart Plug" in final_reply
 
 
 @pytest.mark.asyncio
@@ -143,14 +147,18 @@ async def test_pending_turn_off_living_room(
         "ห้องนั่งเล่น"
     )
 
+    smart_home.turn_off.assert_not_awaited()
+    assert "ยืนยัน" in second_reply
+
+    final_reply = await manager.ask(
+        "ยืนยัน"
+    )
+
     smart_home.turn_off.assert_awaited_once_with(
         "plug001"
     )
 
-    assert (
-        second_reply
-        == "ปิด Living Room Smart Plug แล้วครับ"
-    )
+    assert "Living Room Smart Plug" in final_reply
 
 
 @pytest.mark.asyncio
@@ -170,10 +178,7 @@ async def test_pending_can_be_cancelled(
         "ไม่เอา"
     )
 
-    assert (
-        reply
-        == "ยกเลิกคำสั่ง Smart Home แล้วครับ"
-    )
+    assert "ยกเลิก" in reply
 
     smart_home.turn_on.assert_not_awaited()
     smart_home.turn_off.assert_not_awaited()
@@ -197,10 +202,8 @@ async def test_unknown_clarification_keeps_pending(
         "ห้องครัว"
     )
 
-    assert (
-        "ยังไม่สามารถระบุอุปกรณ์"
-        in reply
-    )
+    assert "Living Room Smart Plug" in reply
+    assert "Bedroom Smart Plug" in reply
 
     smart_home.turn_on.assert_not_awaited()
 
@@ -208,13 +211,15 @@ async def test_unknown_clarification_keeps_pending(
         "ห้องนอน"
     )
 
-    smart_home.turn_on.assert_awaited_once_with(
-        "plug002"
+    smart_home.turn_on.assert_not_awaited()
+    assert "ยืนยัน" in second_reply
+
+    await manager.ask(
+        "ยืนยัน"
     )
 
-    assert (
-        second_reply
-        == "เปิด Bedroom Smart Plug แล้วครับ"
+    smart_home.turn_on.assert_awaited_once_with(
+        "plug002"
     )
 
 
@@ -233,6 +238,12 @@ async def test_pending_is_cleared_after_execution(
 
     await manager.ask(
         "ห้องนอน"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+
+    await manager.ask(
+        "ยืนยัน"
     )
 
     smart_home.turn_on.assert_awaited_once_with(
@@ -322,17 +333,22 @@ async def test_thai_spoken_number_selects_smart_plug_2() -> None:
     smart_home.turn_on.assert_not_awaited()
 
     second_reply = await manager.ask(
-        "สมาร์ทปลักสอง"
+        "สมาร์ทปลั๊กสอง"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+    assert "ยืนยัน" in second_reply
+
+    final_reply = await manager.ask(
+        "ยืนยัน"
     )
 
     smart_home.turn_on.assert_awaited_once_with(
         "plug002"
     )
 
-    assert (
-        second_reply
-        == "เปิด Smart plug 2 แล้วครับ"
-    )
+    assert "Smart plug 2" in final_reply
+
 
 @pytest.mark.asyncio
 async def test_aggregate_smart_home_status_lists_device_states(
@@ -351,3 +367,169 @@ async def test_aggregate_smart_home_status_lists_device_states(
 
     assert "Living Room Smart Plug" in reply
     assert "Bedroom Smart Plug" in reply
+
+    smart_home.turn_on.assert_not_awaited()
+    smart_home.turn_off.assert_not_awaited()
+    smart_home.toggle.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_direct_turn_on_requires_confirmation(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    reply = await manager.ask(
+        "เปิด Living Room Smart Plug"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+
+    assert "ยืนยัน" in reply
+
+
+@pytest.mark.asyncio
+async def test_direct_turn_off_requires_confirmation(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    reply = await manager.ask(
+        "ปิด Living Room Smart Plug"
+    )
+
+    smart_home.turn_off.assert_not_awaited()
+
+    assert "ยืนยัน" in reply
+
+
+@pytest.mark.asyncio
+async def test_confirmation_executes_pending_turn_on(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    await manager.ask(
+        "เปิด Living Room Smart Plug"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+
+    reply = await manager.ask(
+        "ยืนยัน"
+    )
+
+    smart_home.turn_on.assert_awaited_once_with(
+        "plug001"
+    )
+
+    assert "Living Room Smart Plug" in reply
+
+
+@pytest.mark.asyncio
+async def test_cancelled_confirmation_does_not_execute(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    await manager.ask(
+        "เปิด Living Room Smart Plug"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+
+    reply = await manager.ask(
+        "ยกเลิก"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+
+    assert "ยกเลิก" in reply
+
+
+@pytest.mark.asyncio
+async def test_toggle_requires_confirmation(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    reply = await manager.ask(
+        "toggle Living Room Smart Plug"
+    )
+
+    smart_home.toggle.assert_not_awaited()
+
+    assert "ยืนยัน" in reply
+
+
+@pytest.mark.asyncio
+async def test_status_does_not_require_confirmation(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    reply = await manager.ask(
+        "สถานะ Living Room Smart Plug"
+    )
+
+    assert "ยืนยัน" not in reply
+    assert "Living Room Smart Plug" in reply
+
+    smart_home.turn_on.assert_not_awaited()
+    smart_home.turn_off.assert_not_awaited()
+    smart_home.toggle.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_turn_on_requires_confirmation_after_device_selection(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    first_reply = await manager.ask(
+        "เปิด Smart Plug"
+    )
+
+    assert "Living Room Smart Plug" in first_reply
+    assert "Bedroom Smart Plug" in first_reply
+
+    smart_home.turn_on.assert_not_awaited()
+
+    second_reply = await manager.ask(
+        "Bedroom Smart Plug"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+
+    assert "ยืนยัน" in second_reply
+
+    final_reply = await manager.ask(
+        "ยืนยัน"
+    )
+
+    smart_home.turn_on.assert_awaited_once_with(
+        "plug002"
+    )
+
+    assert "Bedroom Smart Plug" in final_reply

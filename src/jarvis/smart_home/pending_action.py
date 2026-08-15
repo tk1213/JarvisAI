@@ -28,6 +28,13 @@ class PendingSmartHomeAction:
                 "at least two candidate devices."
             )
 
+@dataclass(
+    slots=True,
+    frozen=True,
+)
+class PendingSmartHomeConfirmation:
+    action: SmartHomeAction
+    device: SmartDevice
 
 class PendingSmartHomeActionStore:
     def __init__(self) -> None:
@@ -54,4 +61,32 @@ class PendingSmartHomeActionStore:
         pending = self._pending
         self._pending = None
 
+        return pending
+
+class PendingSmartHomeConfirmationStore:
+    def __init__(self) -> None:
+        self._pending: PendingSmartHomeConfirmation | None = None
+
+    @property
+    def pending(self) -> PendingSmartHomeConfirmation | None:
+        return self._pending
+
+    @property
+    def has_pending(self) -> bool:
+        return self._pending is not None
+
+    def set(
+        self,
+        pending: PendingSmartHomeConfirmation,
+    ) -> None:
+        self._pending = pending
+
+    def clear(self) -> None:
+        self._pending = None
+
+    def consume(
+        self,
+    ) -> PendingSmartHomeConfirmation | None:
+        pending = self._pending
+        self._pending = None
         return pending

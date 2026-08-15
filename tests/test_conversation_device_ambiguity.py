@@ -144,25 +144,26 @@ async def test_ambiguous_device_does_not_turn_off(
 
 @pytest.mark.asyncio
 async def test_exact_device_name_is_allowed(
-    conversation: tuple[
-        ConversationManager,
-        SmartHomeService,
-    ],
+    conversation,
 ) -> None:
     manager, smart_home = conversation
 
     reply = await manager.ask(
-        "เปิด Bedroom Smart Plug",
+        "เปิด Bedroom Smart Plug"
     )
 
-    assert (
-        reply
-        == "เปิด Bedroom Smart Plug แล้วครับ"
+    smart_home.turn_on.assert_not_awaited()
+    assert "ยืนยัน" in reply
+
+    final_reply = await manager.ask(
+        "ยืนยัน"
     )
 
     smart_home.turn_on.assert_awaited_once_with(
         "plug002"
     )
+
+    assert "Bedroom Smart Plug" in final_reply
 
 
 @pytest.mark.asyncio

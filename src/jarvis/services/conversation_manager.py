@@ -42,6 +42,8 @@ from jarvis.smart_home.device import SmartDevice
 from jarvis.smart_home.pending_action import (
     PendingSmartHomeAction,
     PendingSmartHomeActionStore,
+    PendingSmartHomeConfirmation,
+    PendingSmartHomeConfirmationStore,
     SmartHomeAction,
 )
 from jarvis.smart_home.resolution import DeviceResolutionStatus
@@ -102,6 +104,10 @@ class ConversationManager:
 
         self._pending_smart_home = (
             PendingSmartHomeActionStore()
+        )
+
+        self._pending_smart_home_confirmation = (
+            PendingSmartHomeConfirmationStore()
         )
 
     def set_ai_agent_bridge(
@@ -321,6 +327,9 @@ class ConversationManager:
         ):
             return ConversationTurnSource.PLANNER
 
+        if self._pending_smart_home_confirmation.has_pending:
+            return ConversationTurnSource.SMART_HOME
+
         if self._pending_smart_home.has_pending:
             return ConversationTurnSource.SMART_HOME
 
@@ -376,6 +385,22 @@ class ConversationManager:
                 )
                 return planner_reply.reply
 
+        if self._pending_smart_home_confirmation.has_pending:
+            self._turn_lifecycle.mark_source(
+                ConversationTurnSource.SMART_HOME
+            )
+
+            reply = await self._handle_pending_smart_home_confirmation(
+                text
+            )
+
+            await self._save_conversation(
+                user_text=text,
+                reply=reply,
+                tool="smart_home",
+            )
+
+            return reply
         if self._pending_smart_home.has_pending:
             self._turn_lifecycle.mark_source(
                 ConversationTurnSource.SMART_HOME
@@ -1165,6 +1190,23 @@ class ConversationManager:
                 "หรือตรวจสอบสถานะครับ"
             )
 
+        if action in {
+            SmartHomeAction.TURN_ON,
+            SmartHomeAction.TURN_OFF,
+            SmartHomeAction.TOGGLE,
+        }:
+            self._pending_smart_home_confirmation.set(
+                PendingSmartHomeConfirmation(
+                    action=action,
+                    device=device,
+                )
+            )
+
+            return (
+                f"ต้องการยืนยันคำสั่งกับ {device.name} ใช่ไหมครับ "
+                "พิมพ์ 'ยืนยัน' เพื่อดำเนินการ หรือ 'ยกเลิก' เพื่อยกเลิกครับ"
+            )
+
         return await self._execute_smart_home_action(
             action=action,
             device=device,
@@ -1209,6 +1251,23 @@ class ConversationManager:
 
             self._pending_smart_home.clear()
 
+            if action in {
+                SmartHomeAction.TURN_ON,
+                SmartHomeAction.TURN_OFF,
+                SmartHomeAction.TOGGLE,
+            }:
+                self._pending_smart_home_confirmation.set(
+                    PendingSmartHomeConfirmation(
+                        action=action,
+                        device=device,
+                    )
+                )
+
+                return (
+                    f"ต้องการยืนยันคำสั่งกับ {device.name} ใช่ไหมครับ "
+                    "พิมพ์ 'ยืนยัน' เพื่อดำเนินการ หรือ 'ยกเลิก' เพื่อยกเลิกครับ"
+                )
+
             return await self._execute_smart_home_action(
                 action=action,
                 device=device,
@@ -1231,7 +1290,39 @@ class ConversationManager:
             )
         )
 
+    async def _handle_pending_smart_home_confirmation(
+        self,
+        text: str,
+    ) -> str:
+        pending = self._pending_smart_home_confirmation.pending
 
+        if pending is None:
+            return "ไม่มีคำสั่ง Smart Home ที่รอการยืนยันครับ"
+
+        normalized_text = DeviceResolver._normalize(text)
+
+        if self._is_cancel_command(normalized_text):
+            self._pending_smart_home_confirmation.clear()
+            return "ยกเลิกคำสั่ง Smart Home แล้วครับ"
+
+        if normalized_text in {
+            "ยืนยัน",
+            "ตกลง",
+            "ใช่",
+            "confirm",
+            "yes",
+        }:
+            self._pending_smart_home_confirmation.clear()
+
+            return await self._execute_smart_home_action(
+                action=pending.action,
+                device=pending.device,
+            )
+
+        return (
+            f"คำสั่งสำหรับ {pending.device.name} "
+            "ยังรอการยืนยันครับ พิมพ์ 'ยืนยัน' หรือ 'ยกเลิก' ครับ"
+        )
 
         # ----------------------------    @classmethod
     def _match_pending_candidates(
