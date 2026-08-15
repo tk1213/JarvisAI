@@ -223,6 +223,28 @@ Tuya read-only live gate    : PASS
 Tuya physical control gate  : PASS
 Original-state restoration  : PASS
 
+Post-Release Hardening
+
+Additional reliability and architecture hardening has been completed on
+main after the v0.7.0-alpha.1 release checkpoint.
+
+Current post-release hardening baseline:
+
+Commit          : 08fe9a2
+Branch          : main
+Full regression : 933 passed
+Ruff            : PASS
+
+Completed post-release work:
+
+- operational health and heartbeat reliability hardening
+- degraded subsystem startup reliability hardening
+- retirement of legacy plugin runtime routing
+
+These changes do not replace the validated v0.7.0-alpha.1 Sprint 7
+release checkpoint. No new release tag has been assigned to this
+post-release hardening baseline.
+
 Next Milestone
 
 Sprint 8 begins from the validated v0.7.0-alpha.1 baseline.

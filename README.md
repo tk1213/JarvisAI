@@ -7,11 +7,13 @@ The project is developed incrementally with a strong focus on stability,
 reliability, maintainability, bounded execution, safety, and real-world
 validation before feature expansion.
 
+
 Current development baseline:
 
 ```text
 JarvisAI 0.7.0-alpha.1
 Sprint 7: Tuya Smart Home Reliability - COMPLETE
+Post-release hardening: ACTIVE
 ```
 
 Current release checkpoint:
@@ -19,8 +21,18 @@ Current release checkpoint:
 ```text
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
+
 Commit  : 6825df0
 ```
+```text
+Current post-release hardening baseline:
+
+```text
+Commit          : 08fe9a2
+Branch          : main
+Remote          : origin/main
+Full regression : 933 passed
+Ruff            : PASS
 
 Python packaging may display the PEP 440 normalized version:
 

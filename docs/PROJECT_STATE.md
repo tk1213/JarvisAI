@@ -867,11 +867,16 @@ real-world Cloud/device validation.
 
 Current Quality Baseline
 
-Current validated release:
+Validated Sprint 7 release:
 
 JarvisAI 0.7.0-alpha.1
 
-Quality state:
+Release checkpoint:
+
+Tag    : v0.7.0-alpha.1
+Commit : 6825df0
+
+Sprint 7 release quality state:
 
 Python compile validation : PASS
 Ruff                      : PASS
@@ -882,10 +887,25 @@ Tuya read-only live gate  : PASS
 Tuya physical control     : PASS
 Original-state restore    : PASS
 
-Git checkpoint:
+Current post-release hardening baseline:
 
-Tag    : v0.7.0-alpha.1
-Commit : 6825df0
+Commit          : 08fe9a2
+Branch          : main
+Remote          : origin/main
+Working tree    : clean
+Full regression : 933 passed
+Ruff            : PASS
+
+Post-release hardening completed after v0.7.0-alpha.1:
+
+- operational health and heartbeat reliability hardening
+- degraded subsystem startup reliability hardening
+- retirement of legacy plugin runtime routing
+
+The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
+release baseline. The current main branch includes additional
+post-release reliability and architecture hardening that has not yet
+been assigned a new release tag.
 
 Architecture Decisions
 
