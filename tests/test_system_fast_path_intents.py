@@ -16,6 +16,7 @@ from jarvis.services.conversation_manager import ConversationManager
         ("health", "system.health"),
         ("health check", "system.health"),
         ("ตรวจสุขภาพระบบ", "system.health"),
+        ("สถานะระบบตอนนี้เป็นอย่างไร", "system.health"),
     ],
 )
 def test_system_fast_path_intents_are_resolved(

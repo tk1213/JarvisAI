@@ -839,6 +839,15 @@ class ConversationManager:
             "system health check",
             "ตรวจสุขภาพระบบ",
             "ตรวจสอบระบบ",
+            "สถานะระบบตอนนี้เป็นอย่างไร",
+        )
+
+        health_phrases = (
+            "สถานะระบบ",
+            "สุขภาพระบบ",
+            "ระบบทำงานปกติ",
+            "jarvis ทำงานปกติ",
+            "jarvis ทำงานโอเค",
         )
 
         version_exact = (
@@ -854,6 +863,12 @@ class ConversationManager:
             return "system.ping"
 
         if normalized_text in health_exact:
+            return "system.health"
+
+        if any(
+            phrase in normalized_text
+            for phrase in health_phrases
+        ):
             return "system.health"
 
         if normalized_text in version_exact:

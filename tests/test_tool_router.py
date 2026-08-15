@@ -87,4 +87,20 @@ def test_do_not_route_unrelated_health_to_system() -> None:
 def test_do_not_route_unrelated_ping_to_system() -> None:
     router = ToolRouter()
 
-    assert router.route("Explain the rules of ping pong") == ToolType.AI    
+    assert router.route("Explain the rules of ping pong") == ToolType.AI
+def test_route_natural_thai_system_health_question() -> None:
+    router = ToolRouter()
+
+    assert (
+        router.route("สถานะระบบตอนนี้เป็นอย่างไร")
+        == ToolType.SYSTEM
+    )
+
+
+def test_route_thai_smart_home_status_remains_smart_home() -> None:
+    router = ToolRouter()
+
+    assert (
+        router.route("สถานะไฟห้องนอน")
+        == ToolType.SMART_HOME
+    )

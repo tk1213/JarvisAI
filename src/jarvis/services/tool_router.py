@@ -132,4 +132,18 @@ class ToolRouter:
             "ระบบทำงานหรือไม่",
         )
 
-        return text in exact_commands
+        if text in exact_commands:
+            return True
+
+        natural_system_phrases = (
+            "สถานะระบบ",
+            "สุขภาพระบบ",
+            "ระบบทำงานปกติ",
+            "jarvis ทำงานปกติ",
+            "jarvis ทำงานโอเค",
+        )
+
+        return any(
+            phrase in text
+            for phrase in natural_system_phrases
+        )
