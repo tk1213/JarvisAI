@@ -5,6 +5,7 @@ from jarvis.audio.player import AudioPlayer
 from jarvis.audio.recorder import AudioRecorder
 from jarvis.config import settings
 from jarvis.core.container import ServiceContainer
+from jarvis.core.logger import log
 from jarvis.database.db import DatabaseManager
 from jarvis.memory.audit_repository import MemoryAuditRepository
 from jarvis.memory.audit_service import MemoryAuditService
@@ -288,4 +289,12 @@ class ServiceFactory:
         self.register_core()
         self.register_smart_home()
         self.register_ai()
-        self.register_voice()
+
+        try:
+            self.register_voice()
+
+        except Exception:  # noqa: BLE001
+            log.exception(
+                "Voice subsystem registration failed; "
+                "continuing without voice runtime"
+            )

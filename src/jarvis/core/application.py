@@ -86,7 +86,9 @@ class JarvisApplication:
             factory = ServiceFactory(container)
             factory.register_all()
 
-            self._wake_word_created = True
+            self._wake_word_created = container.has(
+                "wake_word"
+            )
 
             system = container.resolve(
                 "system",
@@ -398,8 +400,17 @@ class JarvisApplication:
                     restored_records,
                 )
 
-            await smart_home_service.connect()
-            self._smart_home_connected = True
+            try:
+                await smart_home_service.connect()
+
+            except Exception:  # noqa: BLE001
+                log.exception(
+                    "Smart Home connection failed; "
+                    "continuing with Smart Home unavailable"
+                )
+
+            else:
+                self._smart_home_connected = True
 
             await skill_manager.startup()
             self._skills_started = True
