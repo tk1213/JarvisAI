@@ -333,3 +333,21 @@ async def test_thai_spoken_number_selects_smart_plug_2() -> None:
         second_reply
         == "เปิด Smart plug 2 แล้วครับ"
     )
+
+@pytest.mark.asyncio
+async def test_aggregate_smart_home_status_lists_device_states(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    reply = await manager.ask(
+        "สถานะอุปกรณ์ Smart Home เป็นอย่างไร"
+    )
+
+    smart_home.list_devices.assert_awaited()
+
+    assert "Living Room Smart Plug" in reply
+    assert "Bedroom Smart Plug" in reply

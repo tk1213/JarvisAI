@@ -1782,6 +1782,8 @@ class ConversationManager:
             "รายการอุปกรณ์",
             "อุปกรณ์ทั้งหมด",
             "มีอุปกรณ์อะไร",
+            "สถานะอุปกรณ์ smart home",
+            "สถานะอุปกรณ์ทั้งหมด",
             "list devices",
             "all devices",
         )
