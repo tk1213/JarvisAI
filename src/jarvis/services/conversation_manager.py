@@ -428,15 +428,7 @@ class ConversationManager:
                 text
             )
 
-        elif tool_type == ToolType.PLUGIN:
-            self._turn_lifecycle.mark_source(
-                ConversationTurnSource.PLUGIN
-            )
-            reply = (
-                "ระบบ Plugin "
-                "ยังไม่ได้เชื่อมต่อครับ"
-            )
-
+        
         else:
             reply = (
                 "ไม่สามารถเลือกเครื่องมือ"

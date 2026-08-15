@@ -621,3 +621,26 @@ async def test_ai_registration_failure_remains_fatal() -> None:
 
     assert app.started is False
     assert len(container) == 0
+
+@pytest.mark.asyncio
+async def test_application_uses_skill_runtime_without_legacy_plugins() -> None:
+    app = JarvisApplication()
+
+    await app.start(
+        start_background_tasks=False,
+    )
+
+    try:
+        skill_manager = container.get(
+            "skill_manager"
+        )
+
+        assert "smart_home" in (
+            skill_manager.list_started_skills()
+        )
+        assert "system" in (
+            skill_manager.list_started_skills()
+        )
+
+    finally:
+        await app.shutdown()

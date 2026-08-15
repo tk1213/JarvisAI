@@ -11,7 +11,6 @@ class ToolType(str, Enum):
     AI = "ai"
     SMART_HOME = "smart_home"
     SYSTEM = "system"
-    PLUGIN = "plugin"
 
 
 class ToolRouter:
@@ -43,10 +42,6 @@ class ToolRouter:
         ):
             return ToolType.SYSTEM
 
-        if self._is_plugin_command(
-            normalized_text
-        ):
-            return ToolType.PLUGIN
 
         if self._is_smart_home_command(
             normalized_text
@@ -105,26 +100,6 @@ class ToolRouter:
         return any(
             keyword in text
             for keyword in smart_home_keywords
-        )
-
-    @staticmethod
-    def _is_plugin_command(
-        text: str,
-    ) -> bool:
-        plugin_keywords = (
-            "เล่นเพลง",
-            "เปิดเพลง",
-            "ปิดเพลง",
-            "หยุดเพลง",
-            "เพลง",
-            "music",
-            "play music",
-            "stop music",
-        )
-
-        return any(
-            keyword in text
-            for keyword in plugin_keywords
         )
 
     @staticmethod

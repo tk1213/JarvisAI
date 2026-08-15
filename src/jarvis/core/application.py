@@ -12,7 +12,6 @@ from jarvis.config import settings
 from jarvis.core.container import container
 from jarvis.core.event_bus import event_bus
 from jarvis.core.logger import log
-from jarvis.core.plugin_loader import load_plugins
 from jarvis.core.service_factory import ServiceFactory
 from jarvis.core.task_manager import task_manager
 from jarvis.database.db import DatabaseManager
@@ -423,8 +422,7 @@ class JarvisApplication:
                     heartbeat_service.run(),
                 )
 
-            load_plugins()
-
+            
             self.started = True
             log.info("Jarvis Application Ready")
 

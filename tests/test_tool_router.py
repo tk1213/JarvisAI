@@ -24,21 +24,24 @@ def test_route_system_command() -> None:
 
     assert result == ToolType.SYSTEM
 
-
-def test_route_plugin_command() -> None:
+def test_route_music_request_falls_back_to_ai() -> None:
     router = ToolRouter()
 
-    result = router.route("เปิดเพลง")
+    result = router.route(
+        "play music"
+    )
 
-    assert result == ToolType.PLUGIN
+    assert result == ToolType.AI
 
 
-def test_route_is_case_insensitive() -> None:
+def test_route_music_keyword_falls_back_to_ai_case_insensitively() -> None:
     router = ToolRouter()
 
-    result = router.route("MUSIC")
+    result = router.route(
+        "MUSIC"
+    )
 
-    assert result == ToolType.PLUGIN
+    assert result == ToolType.AI
 
 
 def test_route_trims_whitespace() -> None:

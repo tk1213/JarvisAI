@@ -20,7 +20,6 @@ class ConversationTurnSource(StrEnum):
     CAPABILITY = "capability"
     SMART_HOME = "smart_home"
     SYSTEM = "system"
-    PLUGIN = "plugin"
     FALLBACK_AI = "fallback_ai"
     UNKNOWN = "unknown"
 
