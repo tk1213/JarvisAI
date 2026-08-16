@@ -1301,6 +1301,20 @@ class ConversationManager:
 
         normalized_text = DeviceResolver._normalize(text)
 
+        action = self._resolve_smart_home_action(
+            normalized_text
+        )
+
+        if action is SmartHomeAction.STATUS:
+            return await self._handle_smart_home(
+                text
+            )
+
+        if self._is_list_command(
+            normalized_text
+        ):
+            return await self._list_smart_home_devices()
+
         if self._is_cancel_command(normalized_text):
             self._pending_smart_home_confirmation.clear()
             return "ยกเลิกคำสั่ง Smart Home แล้วครับ"
@@ -1873,6 +1887,7 @@ class ConversationManager:
             "รายการอุปกรณ์",
             "อุปกรณ์ทั้งหมด",
             "มีอุปกรณ์อะไร",
+            "มีอุปกรณ์ smart home อะไร",
             "สถานะอุปกรณ์ smart home",
             "สถานะอุปกรณ์ทั้งหมด",
             "list devices",
