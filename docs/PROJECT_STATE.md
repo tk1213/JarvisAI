@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : 08fe9a2
+Commit          : e41e2e5
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 933 passed
+Full regression : 946 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -902,10 +902,31 @@ Post-release hardening completed after v0.7.0-alpha.1:
 - degraded subsystem startup reliability hardening
 - retirement of legacy plugin runtime routing
 
+Sprint 8.1 runtime reliability and safety work completed:
+
+- improved natural-language system health routing
+- added aggregate Smart Home status queries
+- enforced explicit confirmation for Smart Home side effects
+- preserved read-only Smart Home status and device-list queries while
+  side-effect confirmation is pending
+- validated confirmation, cancellation, physical execution, and
+  original-state restoration against live Tuya devices
+
+Sprint 8.1 validation baseline:
+
+Ruff                                : PASS
+Full regression                     : 946 passed
+Tuya aggregate status live gate     : PASS
+Tuya device status live gate        : PASS
+Tuya side-effect confirmation gate  : PASS
+Tuya cancellation gate              : PASS
+Tuya original-state restoration     : PASS
+
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
+release baseline. The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
-post-release reliability and architecture hardening that has not yet
-been assigned a new release tag.
+post-release reliability, architecture hardening, and Sprint 8.1
+runtime safety work that has not yet been assigned a new release tag.
 
 Architecture Decisions
 
@@ -1018,7 +1039,10 @@ Starting release:
 
 v0.7.0-alpha.1
 
-Sprint 8 scope has not yet been fixed.
+Sprint 8.1 runtime reliability and Smart Home confirmation safety work
+has been completed and validated.
+
+The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
 

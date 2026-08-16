@@ -13,7 +13,7 @@ Current development baseline:
 ```text
 JarvisAI 0.7.0-alpha.1
 Sprint 7: Tuya Smart Home Reliability - COMPLETE
-Post-release hardening: ACTIVE
+Sprint 8.1: Runtime Reliability and Smart Home Confirmation Safety - COMPLETE
 ```
 
 Current release checkpoint:
@@ -21,18 +21,24 @@ Current release checkpoint:
 ```text
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-
 Commit  : 6825df0
 ```
-```text
-Current post-release hardening baseline:
+
+Current post-release development baseline:
 
 ```text
-Commit          : 08fe9a2
+Commit          : e41e2e5
 Branch          : main
 Remote          : origin/main
-Full regression : 933 passed
+Full regression : 946 passed
 Ruff            : PASS
+```
+
+The `v0.7.0-alpha.1` tag remains the validated Sprint 7 release
+checkpoint. Current `main` contains additional post-release reliability,
+architecture, and Sprint 8.1 runtime safety work that has not yet been
+assigned a new release tag.
+
 
 Python packaging may display the PEP 440 normalized version:
 
@@ -1087,6 +1093,19 @@ path and a physical smart device.
 
 At the Sprint 7 checkpoint:
 
+```markdown
+Current post-release Sprint 8.1 baseline:
+
+```text
+Commit                              : e41e2e5
+Full regression                     : 946 passed
+Ruff                                : PASS
+Tuya aggregate status live gate     : PASS
+Tuya device status live gate        : PASS
+Tuya side-effect confirmation gate  : PASS
+Tuya cancellation gate              : PASS
+Tuya original-state restoration     : PASS
+
 ```text
 Python compile validation : PASS
 Ruff                      : PASS
@@ -1162,12 +1181,14 @@ In particular:
 
 # Next Milestone
 
-## Sprint 8 — Scope Selection
+## Sprint 8 - Continued Scope Selection
 
-Sprint 8 begins from the verified Sprint 7 production baseline.
+Sprint 8 began from the verified Sprint 7 production baseline.
 
-The Sprint 8 feature scope has not yet been fixed.
+Sprint 8.1 runtime reliability and Smart Home confirmation safety work
+has now been completed and validated.
 
+The next Sprint 8 scope has not yet been fixed.
 Scope selection should be based on:
 
 - the current implementation

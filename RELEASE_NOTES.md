@@ -223,34 +223,56 @@ Tuya read-only live gate    : PASS
 Tuya physical control gate  : PASS
 Original-state restoration  : PASS
 
-Post-Release Hardening
+Post-Release Development
 
-Additional reliability and architecture hardening has been completed on
-main after the v0.7.0-alpha.1 release checkpoint.
+Additional reliability, architecture, and runtime safety work has been
+completed on main after the v0.7.0-alpha.1 release checkpoint.
 
-Current post-release hardening baseline:
+Current post-release development baseline:
 
-Commit          : 08fe9a2
+Commit          : e41e2e5
 Branch          : main
-Full regression : 933 passed
+Full regression : 946 passed
 Ruff            : PASS
 
-Completed post-release work:
+Completed post-release hardening:
 
 - operational health and heartbeat reliability hardening
 - degraded subsystem startup reliability hardening
 - retirement of legacy plugin runtime routing
 
+Sprint 8.1 runtime reliability and Smart Home confirmation safety:
+
+- improved natural-language system health routing
+- added aggregate Smart Home status queries
+- enforced explicit confirmation for Smart Home side effects
+- preserved read-only Smart Home status and device-list queries while
+  side-effect confirmation is pending
+- prevented repeated side-effect commands from bypassing a pending
+  confirmation
+- validated confirmation and cancellation against live Tuya devices
+
+Sprint 8.1 live validation:
+
+Tuya aggregate status live gate     : PASS
+Tuya device status live gate        : PASS
+Tuya side-effect confirmation gate  : PASS
+Tuya cancellation gate              : PASS
+Tuya original-state restoration     : PASS
+
 These changes do not replace the validated v0.7.0-alpha.1 Sprint 7
-release checkpoint. No new release tag has been assigned to this
-post-release hardening baseline.
+release checkpoint. No new release tag has been assigned to the current
+post-release development baseline.
 
 Next Milestone
 
-Sprint 8 begins from the validated v0.7.0-alpha.1 baseline.
+Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
 
-Sprint 8 scope has not yet been fixed.
+Sprint 8.1 runtime reliability and Smart Home confirmation safety work
+has been completed and validated.
 
-No Sprint 8 feature should be considered complete until its
-implementation, automated regression, documentation, and relevant
-live validation have passed.
+The next Sprint 8 scope has not yet been fixed.
+
+No further Sprint 8 feature should be considered complete until its
+implementation, automated regression, documentation, and relevant live
+validation have passed.
