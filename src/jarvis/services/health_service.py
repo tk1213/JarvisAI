@@ -357,24 +357,73 @@ class HealthService:
             ),
         )
 
-        resilience_healthy = container.has(
-            "resilience_runtime"
-        )
+        if not container.has("resilience_runtime"):
+            results["resilience_runtime"] = HealthCheckResult(
+                name="resilience_runtime",
+                state=HealthState.UNAVAILABLE,
+                reason="Resilience runtime is unavailable.",
+            )
+        else:
+            runtime = container.get(
+                "resilience_runtime"
+            )
 
-        results["resilience_runtime"] = HealthCheckResult(
-            name="resilience_runtime",
-            state=(
-                HealthState.HEALTHY
-                if resilience_healthy
-                else HealthState.UNAVAILABLE
-            ),
-            reason=(
-                None
-                if resilience_healthy
-                else "Resilience runtime is unavailable."
-            ),
-        )
+            snapshot_method = getattr(
+                runtime,
+                "snapshot",
+                None,
+            )
 
+            if not callable(snapshot_method):
+                results["resilience_runtime"] = HealthCheckResult(
+                    name="resilience_runtime",
+                    state=HealthState.HEALTHY,
+                )
+            else:
+                snapshot = snapshot_method()
+                metrics = snapshot.metrics
+
+                resilience_details = {
+                    "summary": snapshot.summary,
+                    "metrics": {
+                        "plans_started": metrics.plans_started,
+                        "plans_completed": metrics.plans_completed,
+                        "plans_failed": metrics.plans_failed,
+                        "steps_started": metrics.steps_started,
+                        "steps_completed": metrics.steps_completed,
+                        "steps_failed": metrics.steps_failed,
+                        "retries": metrics.retries,
+                        "timeouts": metrics.timeouts,
+                        "circuit_rejections": (
+                            metrics.circuit_rejections
+                        ),
+                        "bulkhead_rejections": (
+                            metrics.bulkhead_rejections
+                        ),
+                        "capability_failures": dict(
+                            metrics.capability_failures
+                        ),
+                    },
+                }
+
+                results["resilience_runtime"] = HealthCheckResult(
+                    name="resilience_runtime",
+                    state=(
+                        HealthState.HEALTHY
+                        if snapshot.healthy
+                        else HealthState.DEGRADED
+                    ),
+                    reason=(
+                        None
+                        if snapshot.healthy
+                        else (
+                            "Resilience runtime reports "
+                            "degraded state."
+                        )
+                    ),
+                    details=resilience_details,
+                    critical=False,
+                )
         return results
 
     async def check(

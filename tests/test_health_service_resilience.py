@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from jarvis.core.container import container
 from jarvis.planner.resilience_runtime import (
     resilience_runtime,
 )
+from jarvis.services.health_contracts import HealthState
 from jarvis.services.health_service import HealthService
 
 
@@ -423,6 +426,94 @@ async def test_heartbeat_health_passes_when_task_and_service_are_running(
 
         assert results["heartbeat_task"].passed is True
         assert results["heartbeat_task"].reason is None
+
+    finally:
+        container.clear()
+
+        for name, registered_service in existing.items():
+            container.register(
+                name,
+                registered_service,
+            )
+
+class DegradedResilienceSnapshot:
+    healthy = False
+    summary = "resilience degraded"
+
+    class Metrics:
+        plans_started = 4
+        plans_completed = 2
+        plans_failed = 2
+
+        steps_started = 8
+        steps_completed = 5
+        steps_failed = 3
+
+        retries = 2
+        timeouts = 1
+        circuit_rejections = 1
+        bulkhead_rejections = 0
+
+        capability_failures: ClassVar[dict[str, int]] = {
+            "smart_home.control": 2,
+        }
+
+    metrics = Metrics()
+
+
+class DegradedResilienceRuntime:
+    def snapshot(
+        self,
+    ) -> DegradedResilienceSnapshot:
+        return DegradedResilienceSnapshot()
+
+
+@pytest.mark.asyncio
+async def test_diagnostics_reports_degraded_resilience_runtime() -> None:
+    existing = dict(
+        container._services  # type: ignore[attr-defined]
+    )
+
+    try:
+        container.clear()
+
+        container.register(
+            "resilience_runtime",
+            DegradedResilienceRuntime(),
+        )
+
+        service = HealthService()
+        results = await service.diagnostics()
+
+        result = results["resilience_runtime"]
+
+        assert result.state is HealthState.DEGRADED
+        assert result.passed is False
+        assert result.available is True
+        assert result.critical is False
+
+        assert result.reason == (
+            "Resilience runtime reports degraded state."
+        )
+
+        assert result.details == {
+            "summary": "resilience degraded",
+            "metrics": {
+                "plans_started": 4,
+                "plans_completed": 2,
+                "plans_failed": 2,
+                "steps_started": 8,
+                "steps_completed": 5,
+                "steps_failed": 3,
+                "retries": 2,
+                "timeouts": 1,
+                "circuit_rejections": 1,
+                "bulkhead_rejections": 0,
+                "capability_failures": {
+                    "smart_home.control": 2,
+                },
+            },
+        }
 
     finally:
         container.clear()

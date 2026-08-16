@@ -220,51 +220,126 @@ def _print_doctor_details(
     check_name: str,
     result: HealthCheckResult,
 ) -> None:
-    if check_name != "audio":
+    if check_name == "audio":
+        input_details = result.details.get(
+            "input"
+        )
+        output_details = result.details.get(
+            "output"
+        )
+
+        if isinstance(
+            input_details,
+            dict,
+        ):
+            print(
+                "       Input : "
+                f"[{input_details.get('index')}] "
+                f"{input_details.get('name')}"
+            )
+            print(
+                "       API   : "
+                f"{input_details.get('host_api')}"
+            )
+            print(
+                "       Rate  : "
+                f"{input_details.get('sample_rate')} Hz"
+            )
+
+        if isinstance(
+            output_details,
+            dict,
+        ):
+            print(
+                "       Output: "
+                f"[{output_details.get('index')}] "
+                f"{output_details.get('name')}"
+            )
+            print(
+                "       API   : "
+                f"{output_details.get('host_api')}"
+            )
+            print(
+                "       Rate  : "
+                f"{output_details.get('sample_rate')} Hz"
+            )
+
         return
 
-    input_details = result.details.get(
-        "input"
+    if check_name != "resilience_runtime":
+        return
+
+    summary = result.details.get(
+        "summary"
     )
-    output_details = result.details.get(
-        "output"
+    metrics = result.details.get(
+        "metrics"
     )
 
     if isinstance(
-        input_details,
-        dict,
+        summary,
+        str,
     ):
         print(
-            "       Input : "
-            f"[{input_details.get('index')}] "
-            f"{input_details.get('name')}"
-        )
-        print(
-            "       API   : "
-            f"{input_details.get('host_api')}"
-        )
-        print(
-            "       Rate  : "
-            f"{input_details.get('sample_rate')} Hz"
+            "       Summary            : "
+            f"{summary}"
         )
 
-    if isinstance(
-        output_details,
+    if not isinstance(
+        metrics,
         dict,
     ):
+        return
+
+    print(
+        "       Plans              : "
+        f"{metrics.get('plans_started', 0)} / "
+        f"{metrics.get('plans_completed', 0)} / "
+        f"{metrics.get('plans_failed', 0)}"
+    )
+    print(
+        "       Steps              : "
+        f"{metrics.get('steps_started', 0)} / "
+        f"{metrics.get('steps_completed', 0)} / "
+        f"{metrics.get('steps_failed', 0)}"
+    )
+    print(
+        "       Retries            : "
+        f"{metrics.get('retries', 0)}"
+    )
+    print(
+        "       Timeouts           : "
+        f"{metrics.get('timeouts', 0)}"
+    )
+    print(
+        "       Circuit rejections : "
+        f"{metrics.get('circuit_rejections', 0)}"
+    )
+    print(
+        "       Bulkhead rejections: "
+        f"{metrics.get('bulkhead_rejections', 0)}"
+    )
+
+    capability_failures = metrics.get(
+        "capability_failures",
+        {},
+    )
+
+    if isinstance(
+        capability_failures,
+        dict,
+    ) and capability_failures:
         print(
-            "       Output: "
-            f"[{output_details.get('index')}] "
-            f"{output_details.get('name')}"
+            "       Capability failures:"
         )
-        print(
-            "       API   : "
-            f"{output_details.get('host_api')}"
-        )
-        print(
-            "       Rate  : "
-            f"{output_details.get('sample_rate')} Hz"
-        )
+
+        for capability, count in sorted(
+            capability_failures.items()
+        ):
+            print(
+                "         "
+                f"{capability}: {count}"
+            )
 
 async def doctor() -> bool:
     print("=" * 40)
