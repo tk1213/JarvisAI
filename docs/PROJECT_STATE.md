@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : e41e2e5
+Commit          : b6dde25
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 946 passed
+Full regression : 951 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -922,11 +922,30 @@ Tuya side-effect confirmation gate  : PASS
 Tuya cancellation gate              : PASS
 Tuya original-state restoration     : PASS
 
+Sprint 8.2 voice confirmation safety integration completed:
+
+- exposed pending Smart Home confirmation through the shared pending
+  Smart Home state used by the voice dialogue runtime
+- ensured Smart Home cancellation clears both device clarification and
+  side-effect confirmation state
+- added VoiceDialogueRuntime integration coverage for confirmation,
+  cancellation, and read-only status while confirmation is pending
+- preserved bounded voice follow-up behavior while Smart Home
+  confirmation is active
+
+Sprint 8.2 validation baseline:
+
+Ruff                              : PASS
+Full regression                   : 951 passed
+Voice confirmation integration    : PASS
+Voice cancellation integration    : PASS
+Voice read-only pending query     : PASS
+
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
-release baseline. The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
-post-release reliability, architecture hardening, and Sprint 8.1
-runtime safety work that has not yet been assigned a new release tag.
+post-release reliability, architecture hardening, Sprint 8.1 runtime
+safety work, and Sprint 8.2 voice confirmation safety integration that
+have not yet been assigned a new release tag.
 
 Architecture Decisions
 
@@ -1041,6 +1060,9 @@ v0.7.0-alpha.1
 
 Sprint 8.1 runtime reliability and Smart Home confirmation safety work
 has been completed and validated.
+
+Sprint 8.2 voice Smart Home confirmation safety integration has also
+been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 

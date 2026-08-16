@@ -14,6 +14,7 @@ Current development baseline:
 JarvisAI 0.7.0-alpha.1
 Sprint 7: Tuya Smart Home Reliability - COMPLETE
 Sprint 8.1: Runtime Reliability and Smart Home Confirmation Safety - COMPLETE
+Sprint 8.2: Voice Smart Home Confirmation Safety Integration - COMPLETE
 ```
 
 Current release checkpoint:
@@ -27,10 +28,10 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : e41e2e5
+Commit          : b6dde25
 Branch          : main
 Remote          : origin/main
-Full regression : 946 passed
+Full regression : 951 passed
 Ruff            : PASS
 ```
 
@@ -1094,17 +1095,20 @@ path and a physical smart device.
 At the Sprint 7 checkpoint:
 
 ```markdown
-Current post-release Sprint 8.1 baseline:
+Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : e41e2e5
-Full regression                     : 946 passed
+Commit                              : b6dde25
+Full regression                     : 951 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
 Tuya side-effect confirmation gate  : PASS
 Tuya cancellation gate              : PASS
 Tuya original-state restoration     : PASS
+Voice confirmation integration      : PASS
+Voice cancellation integration      : PASS
+Voice read-only pending query       : PASS
 
 ```text
 Python compile validation : PASS
@@ -1187,6 +1191,8 @@ Sprint 8 began from the verified Sprint 7 production baseline.
 
 Sprint 8.1 runtime reliability and Smart Home confirmation safety work
 has now been completed and validated.
+
+Sprint 8.2 complete
 
 The next Sprint 8 scope has not yet been fixed.
 Scope selection should be based on:

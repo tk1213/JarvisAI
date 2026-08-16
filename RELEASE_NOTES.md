@@ -230,9 +230,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 
 Current post-release development baseline:
 
-Commit          : e41e2e5
+Commit          : b6dde25
 Branch          : main
-Full regression : 946 passed
+Full regression : 951 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -264,12 +264,34 @@ These changes do not replace the validated v0.7.0-alpha.1 Sprint 7
 release checkpoint. No new release tag has been assigned to the current
 post-release development baseline.
 
+Sprint 8.2 voice Smart Home confirmation safety integration:
+
+- exposed pending Smart Home confirmation through the shared pending
+  Smart Home state used by the voice dialogue runtime
+- ensured Smart Home cancellation clears both device clarification and
+  side-effect confirmation state
+- added VoiceDialogueRuntime integration coverage for confirmation,
+  cancellation, and read-only status while confirmation is pending
+- preserved bounded voice follow-up behavior while Smart Home
+  confirmation is active
+
+Sprint 8.2 validation:
+
+Ruff                              : PASS
+Full regression                   : 951 passed
+Voice confirmation integration    : PASS
+Voice cancellation integration    : PASS
+Voice read-only pending query     : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
 
 Sprint 8.1 runtime reliability and Smart Home confirmation safety work
 has been completed and validated.
+
+Sprint 8.2 voice Smart Home confirmation safety integration has also
+been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
