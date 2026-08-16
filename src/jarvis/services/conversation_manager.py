@@ -142,7 +142,10 @@ class ConversationManager:
 
     @property
     def has_pending_smart_home(self) -> bool:
-        return self._pending_smart_home.has_pending
+        return (
+            self._pending_smart_home.has_pending
+            or self._pending_smart_home_confirmation.has_pending
+        )
 
     @property
     def last_turn(self) -> ConversationTurnResult | None:
@@ -227,12 +230,17 @@ class ConversationManager:
         )
 
     def cancel_pending_smart_home(self) -> bool:
-        if not self._pending_smart_home.has_pending:
-            return False
+        cancelled = False
 
-        self._pending_smart_home.clear()
+        if self._pending_smart_home.has_pending:
+            self._pending_smart_home.clear()
+            cancelled = True
 
-        return True
+        if self._pending_smart_home_confirmation.has_pending:
+            self._pending_smart_home_confirmation.clear()
+            cancelled = True
+
+        return cancelled
 
     async def ask(
         self,

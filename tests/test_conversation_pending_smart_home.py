@@ -600,3 +600,49 @@ async def test_device_list_is_allowed_while_confirmation_is_pending(
     smart_home.turn_on.assert_awaited_once_with(
         "plug001"
     )
+
+@pytest.mark.asyncio
+async def test_pending_confirmation_is_exposed_as_pending_smart_home(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    assert manager.has_pending_smart_home is False
+
+    await manager.ask(
+        "เปิด Living Room Smart Plug"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+
+    assert manager.has_pending_smart_home is True
+
+    await manager.ask(
+        "ยืนยัน"
+    )
+
+    assert manager.has_pending_smart_home is False
+
+@pytest.mark.asyncio
+async def test_cancel_pending_smart_home_clears_confirmation(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    await manager.ask(
+        "เปิด Living Room Smart Plug"
+    )
+
+    smart_home.turn_on.assert_not_awaited()
+    assert manager.has_pending_smart_home is True
+
+    assert manager.cancel_pending_smart_home() is True
+    assert manager.has_pending_smart_home is False
+
+    smart_home.turn_on.assert_not_awaited()

@@ -4,9 +4,14 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+from jarvis.services.conversation_manager import ConversationManager
+from jarvis.services.tool_router import ToolType
+from jarvis.smart_home.device import SmartDevice
+from jarvis.smart_home.service import SmartHomeService
 from jarvis.voice.dialogue_runtime import VoiceDialogueRuntime
 from jarvis.voice.turn_runtime import (
     VoiceTurnResult,
+    VoiceTurnRuntime,
     VoiceTurnStatus,
 )
 
@@ -162,3 +167,217 @@ def test_negative_follow_up_limit_is_rejected() -> None:
             conversation=Mock(),
             max_follow_ups=-1,
         )
+
+@pytest.mark.asyncio
+async def test_voice_dialogue_confirms_smart_home_side_effect() -> None:
+    stt = Mock()
+    stt.listen_vad = AsyncMock(
+        side_effect=(
+            "เปิด Living Room Smart Plug",
+            "ยืนยัน",
+        )
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    memory = Mock()
+    memory.save_message = AsyncMock()
+    memory.get_ai_history = AsyncMock(
+        return_value=[]
+    )
+
+    router = Mock()
+    router.route.return_value = ToolType.SMART_HOME
+
+    smart_home = Mock(
+        spec=SmartHomeService
+    )
+
+    device = SmartDevice(
+        id="plug001",
+        name="Living Room Smart Plug",
+        room="living room",
+        device_type="cz",
+        online=True,
+        power=False,
+    )
+
+    smart_home.list_devices = AsyncMock(
+        return_value=[device]
+    )
+    smart_home.turn_on = AsyncMock(
+        return_value=True
+    )
+    smart_home.turn_off = AsyncMock(
+        return_value=True
+    )
+    smart_home.toggle = AsyncMock(
+        return_value=True
+    )
+    smart_home.get_device = AsyncMock(
+        return_value=device
+    )
+
+    conversation = ConversationManager(
+        ai=Mock(),
+        memory=memory,
+        router=router,
+        smart_home=smart_home,
+    )
+
+    voice_turn = VoiceTurnRuntime(
+        stt=stt,
+        conversation=conversation,
+        tts=tts,
+    )
+
+    runtime = VoiceDialogueRuntime(
+        voice_turn=voice_turn,
+        conversation=conversation,
+        max_follow_ups=2,
+    )
+
+    result = await runtime.run(
+        language="th"
+    )
+
+    smart_home.turn_on.assert_awaited_once_with(
+        "plug001"
+    )
+
+    assert len(result.turns) == 2
+    assert result.follow_ups_used == 1
+    assert result.pending_smart_home is False
+    assert result.completed is True
+
+@pytest.mark.asyncio
+async def test_voice_dialogue_cancels_smart_home_side_effect() -> None:
+    stt = Mock()
+    stt.listen_vad = AsyncMock(
+        side_effect=(
+            "เปิด Living Room Smart Plug",
+            "ยกเลิก",
+        )
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    memory = Mock()
+    memory.save_message = AsyncMock()
+    memory.get_ai_history = AsyncMock(return_value=[])
+
+    router = Mock()
+    router.route.return_value = ToolType.SMART_HOME
+
+    smart_home = Mock(spec=SmartHomeService)
+
+    device = SmartDevice(
+        id="plug001",
+        name="Living Room Smart Plug",
+        room="living room",
+        device_type="cz",
+        online=True,
+        power=False,
+    )
+
+    smart_home.list_devices = AsyncMock(return_value=[device])
+    smart_home.turn_on = AsyncMock(return_value=True)
+    smart_home.turn_off = AsyncMock(return_value=True)
+    smart_home.toggle = AsyncMock(return_value=True)
+    smart_home.get_device = AsyncMock(return_value=device)
+
+    conversation = ConversationManager(
+        ai=Mock(),
+        memory=memory,
+        router=router,
+        smart_home=smart_home,
+    )
+
+    voice_turn = VoiceTurnRuntime(
+        stt=stt,
+        conversation=conversation,
+        tts=tts,
+    )
+
+    runtime = VoiceDialogueRuntime(
+        voice_turn=voice_turn,
+        conversation=conversation,
+        max_follow_ups=2,
+    )
+
+    result = await runtime.run(language="th")
+
+    smart_home.turn_on.assert_not_awaited()
+
+    assert len(result.turns) == 2
+    assert result.follow_ups_used == 1
+    assert result.pending_smart_home is False
+    assert result.completed is True
+
+@pytest.mark.asyncio
+async def test_voice_dialogue_allows_status_while_confirmation_is_pending() -> None:
+    stt = Mock()
+    stt.listen_vad = AsyncMock(
+        side_effect=(
+            "เปิด Living Room Smart Plug",
+            "สถานะ Living Room Smart Plug",
+            "ยืนยัน",
+        )
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    memory = Mock()
+    memory.save_message = AsyncMock()
+    memory.get_ai_history = AsyncMock(return_value=[])
+
+    router = Mock()
+    router.route.return_value = ToolType.SMART_HOME
+
+    smart_home = Mock(spec=SmartHomeService)
+
+    device = SmartDevice(
+        id="plug001",
+        name="Living Room Smart Plug",
+        room="living room",
+        device_type="cz",
+        online=True,
+        power=False,
+    )
+
+    smart_home.list_devices = AsyncMock(return_value=[device])
+    smart_home.turn_on = AsyncMock(return_value=True)
+    smart_home.turn_off = AsyncMock(return_value=True)
+    smart_home.toggle = AsyncMock(return_value=True)
+    smart_home.get_device = AsyncMock(return_value=device)
+
+    conversation = ConversationManager(
+        ai=Mock(),
+        memory=memory,
+        router=router,
+        smart_home=smart_home,
+    )
+
+    voice_turn = VoiceTurnRuntime(
+        stt=stt,
+        conversation=conversation,
+        tts=tts,
+    )
+
+    runtime = VoiceDialogueRuntime(
+        voice_turn=voice_turn,
+        conversation=conversation,
+        max_follow_ups=2,
+    )
+
+    result = await runtime.run(language="th")
+
+    smart_home.turn_on.assert_awaited_once_with("plug001")
+
+    assert len(result.turns) == 3
+    assert result.follow_ups_used == 2
+    assert result.pending_smart_home is False
+    assert result.completed is True
