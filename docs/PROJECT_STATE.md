@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : cb126d3
+Commit          : 8c09add
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 952 passed
+Full regression : 954 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -965,12 +965,35 @@ Microphone -> STT live gate       : PASS
 Voice Tuya confirmation live gate : PASS
 Voice Tuya cancellation live gate : PASS
 
+Sprint 8.4 audio-device diagnostics and observability hardening completed:
+
+- exposed selected production audio-device metadata through runtime
+  health diagnostics
+- added doctor reporting for input and output device name, index,
+  Windows host API, and sample rate
+- preserved existing health-state and criticality semantics
+- retained compatibility with generic placeholder audio services used
+  by readiness tests
+- validated the production doctor path against the active Windows
+  WASAPI microphone and speaker endpoints
+
+Sprint 8.4 validation baseline:
+
+Ruff                              : PASS
+Full regression                   : 954 passed
+Audio runtime diagnostics         : PASS
+Doctor audio endpoint reporting   : PASS
+Production doctor live gate       : PASS
+
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
 post-release reliability, architecture hardening, Sprint 8.1 runtime
-safety work, Sprint 8.2 voice confirmation safety integration, and
-Sprint 8.3 voice Tuya live safety validation that have not yet been
-assigned a new release tag.
+safety work, Sprint 8.2 voice confirmation safety integration, Sprint
+8.3 voice Tuya live safety validation, and Sprint 8.4 audio-device
+diagnostics and observability hardening that have not yet been assigned
+a new release tag.
+
+
 
 Architecture Decisions
 
@@ -1092,6 +1115,9 @@ been completed and validated.
 Sprint 8.3 voice Tuya live safety validation has also been completed
 and validated against the production microphone, STT, voice dialogue,
 and physical Tuya integration path.
+
+Sprint 8.4 audio-device diagnostics and observability hardening has
+also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 

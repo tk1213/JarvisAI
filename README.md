@@ -16,6 +16,7 @@ Sprint 7: Tuya Smart Home Reliability - COMPLETE
 Sprint 8.1: Runtime Reliability and Smart Home Confirmation Safety - COMPLETE
 Sprint 8.2: Voice Smart Home Confirmation Safety Integration - COMPLETE
 Sprint 8.3: Voice Tuya Live Safety Validation - COMPLETE
+Sprint 8.4: Audio Device Diagnostics and Observability Hardening - COMPLETE
 ```
 
 Current release checkpoint:
@@ -29,18 +30,19 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : cb126d3
+Commit          : 8c09add
 Branch          : main
 Remote          : origin/main
-Full regression : 952 passed
+Full regression : 954 passed
 Ruff            : PASS
 ```
 
 The `v0.7.0-alpha.1` tag remains the validated Sprint 7 release
 checkpoint. Current `main` contains additional post-release reliability,
 architecture, Sprint 8.1 runtime safety, Sprint 8.2 voice confirmation
-integration, and Sprint 8.3 voice Tuya live safety validation work that
-has not yet been assigned a new release tag.
+integration, Sprint 8.3 voice Tuya live safety validation, and Sprint
+8.4 audio-device diagnostics and observability hardening that have not
+yet been assigned a new release tag.
 
 
 Python packaging may display the PEP 440 normalized version:
@@ -1218,6 +1220,9 @@ Sprint 8.3 voice Tuya live safety validation has been completed and
 validated against the production microphone, STT, voice dialogue, and
 physical Tuya control path.
 
+Sprint 8.4 audio-device diagnostics and observability hardening has
+also been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1230,6 +1235,23 @@ Scope selection should be based on:
 - regression risk
 - safety implications
 - real-world usability
+
+Sprint 8.4 hardens runtime audio observability by exposing the selected
+production audio endpoints through the health and doctor diagnostics.
+
+The system doctor now reports the selected input and output device
+index, device name, Windows host API, and sample rate. This makes the
+actual runtime audio routing directly observable and reduces ambiguity
+when diagnosing Windows audio-device selection issues.
+
+Sprint 8.4 validation confirms that:
+
+- runtime readiness exposes the selected audio-device details
+- the doctor command reports the selected input and output endpoints
+- the validated production microphone remains on Windows WASAPI
+- the validated production speaker output remains on Windows WASAPI
+- operational health semantics remain unchanged
+- the complete automated regression suite remains green
 
 No Sprint 8 feature should be considered complete until its
 implementation, automated regression, documentation, and relevant live

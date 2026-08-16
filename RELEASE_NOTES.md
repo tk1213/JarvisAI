@@ -222,6 +222,9 @@ Full regression             : 882 passed
 Tuya read-only live gate    : PASS
 Tuya physical control gate  : PASS
 Original-state restoration  : PASS
+Audio runtime diagnostics           : PASS
+Audio input endpoint reporting      : PASS
+Audio output endpoint reporting     : PASS
 
 Post-Release Development
 
@@ -308,6 +311,26 @@ Microphone -> STT live gate       : PASS
 Voice Tuya confirmation live gate : PASS
 Voice Tuya cancellation live gate : PASS
 
+Sprint 8.4 audio-device diagnostics and observability hardening:
+
+- exposed selected production audio-device metadata through runtime
+  health diagnostics
+- added doctor reporting for input and output device name, index,
+  Windows host API, and sample rate
+- preserved existing health-state and criticality semantics
+- retained compatibility with runtime readiness tests that use generic
+  placeholder audio services
+- validated the production doctor path against the active Windows
+  WASAPI microphone and speaker endpoints
+
+Sprint 8.4 validation:
+
+Ruff                              : PASS
+Full regression                   : 954 passed
+Audio runtime diagnostics         : PASS
+Doctor audio endpoint reporting   : PASS
+Production doctor live gate       : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -321,6 +344,9 @@ been completed and validated.
 Sprint 8.3 voice Tuya live safety validation has also been completed
 and validated against the production microphone, STT, voice dialogue,
 and physical Tuya integration path.
+
+Sprint 8.4 audio-device diagnostics and observability hardening has
+also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
