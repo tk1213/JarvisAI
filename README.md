@@ -15,6 +15,7 @@ JarvisAI 0.7.0-alpha.1
 Sprint 7: Tuya Smart Home Reliability - COMPLETE
 Sprint 8.1: Runtime Reliability and Smart Home Confirmation Safety - COMPLETE
 Sprint 8.2: Voice Smart Home Confirmation Safety Integration - COMPLETE
+Sprint 8.3: Voice Tuya Live Safety Validation - COMPLETE
 ```
 
 Current release checkpoint:
@@ -28,17 +29,18 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : b6dde25
+Commit          : cb126d3
 Branch          : main
 Remote          : origin/main
-Full regression : 951 passed
+Full regression : 952 passed
 Ruff            : PASS
 ```
 
 The `v0.7.0-alpha.1` tag remains the validated Sprint 7 release
 checkpoint. Current `main` contains additional post-release reliability,
-architecture, and Sprint 8.1 runtime safety work that has not yet been
-assigned a new release tag.
+architecture, Sprint 8.1 runtime safety, Sprint 8.2 voice confirmation
+integration, and Sprint 8.3 voice Tuya live safety validation work that
+has not yet been assigned a new release tag.
 
 
 Python packaging may display the PEP 440 normalized version:
@@ -1092,23 +1094,7 @@ path and a physical smart device.
 
 # Current Quality Baseline
 
-At the Sprint 7 checkpoint:
-
-```markdown
-Current post-release Sprint 8 baseline:
-
-```text
-Commit                              : b6dde25
-Full regression                     : 951 passed
-Ruff                                : PASS
-Tuya aggregate status live gate     : PASS
-Tuya device status live gate        : PASS
-Tuya side-effect confirmation gate  : PASS
-Tuya cancellation gate              : PASS
-Tuya original-state restoration     : PASS
-Voice confirmation integration      : PASS
-Voice cancellation integration      : PASS
-Voice read-only pending query       : PASS
+At the Sprint 7 release checkpoint:
 
 ```text
 Python compile validation : PASS
@@ -1119,6 +1105,39 @@ Tuya read-only live gate  : PASS
 Tuya physical control     : PASS
 Original-state restore    : PASS
 ```
+
+Current post-release Sprint 8 baseline:
+
+```text
+Commit                              : cb126d3
+Full regression                     : 952 passed
+Ruff                                : PASS
+Tuya aggregate status live gate     : PASS
+Tuya device status live gate        : PASS
+Tuya side-effect confirmation gate  : PASS
+Tuya cancellation gate              : PASS
+Tuya original-state restoration     : PASS
+Voice confirmation integration      : PASS
+Voice cancellation integration      : PASS
+Voice read-only pending query       : PASS
+Microphone -> STT live gate         : PASS
+Voice Tuya confirmation live gate   : PASS
+Voice Tuya cancellation live gate   : PASS
+```
+
+Sprint 8.3 additionally validates the production voice path against the
+real Windows audio environment and physical Tuya integration. The
+validated microphone path uses the Windows WASAPI representation of the
+RØDE NT-USB Mini rather than the unreliable WDM-KS representation.
+
+The Sprint 8.3 live validation confirms that:
+
+- microphone capture reaches STT successfully
+- spoken Smart Home side effects enter the confirmation boundary
+- spoken confirmation executes the pending Smart Home action
+- spoken cancellation clears the pending action without executing it
+- the voice dialogue runtime returns to a non-pending state after either
+  confirmation or cancellation
 
 Current release:
 
@@ -1190,11 +1209,17 @@ In particular:
 Sprint 8 began from the verified Sprint 7 production baseline.
 
 Sprint 8.1 runtime reliability and Smart Home confirmation safety work
-has now been completed and validated.
+has been completed and validated.
 
-Sprint 8.2 complete
+Sprint 8.2 voice Smart Home confirmation safety integration has been
+completed and validated.
+
+Sprint 8.3 voice Tuya live safety validation has been completed and
+validated against the production microphone, STT, voice dialogue, and
+physical Tuya control path.
 
 The next Sprint 8 scope has not yet been fixed.
+
 Scope selection should be based on:
 
 - the current implementation
@@ -1209,7 +1234,6 @@ Scope selection should be based on:
 No Sprint 8 feature should be considered complete until its
 implementation, automated regression, documentation, and relevant live
 validation have passed.
-
 ---
 
 # Release History

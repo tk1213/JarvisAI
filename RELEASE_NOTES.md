@@ -230,9 +230,10 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 
 Current post-release development baseline:
 
-Commit          : b6dde25
+
+Commit          : cb126d3
 Branch          : main
-Full regression : 951 passed
+Full regression : 952 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -283,6 +284,30 @@ Voice confirmation integration    : PASS
 Voice cancellation integration    : PASS
 Voice read-only pending query     : PASS
 
+Sprint 8.3 voice Tuya live safety validation:
+
+- validated production microphone selection against the real Windows
+  audio environment
+- validated the Windows WASAPI representation of the RรDE NT-USB Mini
+  for production microphone capture
+- validated production microphone capture through OpenAI STT
+- validated spoken Smart Home side-effect confirmation through the
+  production voice dialogue runtime
+- validated spoken Smart Home cancellation through the production voice
+  dialogue runtime
+- confirmed that cancellation clears the pending Smart Home action
+  without executing it
+- added repeatable live gates for voice Tuya confirmation and
+  cancellation
+
+Sprint 8.3 validation:
+
+Ruff                              : PASS
+Full regression                   : 952 passed
+Microphone -> STT live gate       : PASS
+Voice Tuya confirmation live gate : PASS
+Voice Tuya cancellation live gate : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -292,6 +317,10 @@ has been completed and validated.
 
 Sprint 8.2 voice Smart Home confirmation safety integration has also
 been completed and validated.
+
+Sprint 8.3 voice Tuya live safety validation has also been completed
+and validated against the production microphone, STT, voice dialogue,
+and physical Tuya integration path.
 
 The next Sprint 8 scope has not yet been fixed.
 

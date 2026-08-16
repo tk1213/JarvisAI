@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : b6dde25
+Commit          : cb126d3
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 951 passed
+Full regression : 952 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -941,11 +941,36 @@ Voice confirmation integration    : PASS
 Voice cancellation integration    : PASS
 Voice read-only pending query     : PASS
 
+Sprint 8.3 voice Tuya live safety validation completed:
+
+- validated production microphone selection against the real Windows
+  audio environment
+- validated the Windows WASAPI representation of the RØDE NT-USB Mini
+  for production microphone capture
+- validated production microphone capture through OpenAI STT
+- validated spoken Smart Home side-effect confirmation through the
+  production voice dialogue runtime
+- validated spoken Smart Home cancellation through the production voice
+  dialogue runtime
+- confirmed that cancellation clears the pending Smart Home action
+  without executing it
+- added repeatable live gates for voice Tuya confirmation and
+  cancellation
+
+Sprint 8.3 validation baseline:
+
+Ruff                              : PASS
+Full regression                   : 952 passed
+Microphone -> STT live gate       : PASS
+Voice Tuya confirmation live gate : PASS
+Voice Tuya cancellation live gate : PASS
+
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
 post-release reliability, architecture hardening, Sprint 8.1 runtime
-safety work, and Sprint 8.2 voice confirmation safety integration that
-have not yet been assigned a new release tag.
+safety work, Sprint 8.2 voice confirmation safety integration, and
+Sprint 8.3 voice Tuya live safety validation that have not yet been
+assigned a new release tag.
 
 Architecture Decisions
 
@@ -1063,6 +1088,10 @@ has been completed and validated.
 
 Sprint 8.2 voice Smart Home confirmation safety integration has also
 been completed and validated.
+
+Sprint 8.3 voice Tuya live safety validation has also been completed
+and validated against the production microphone, STT, voice dialogue,
+and physical Tuya integration path.
 
 The next Sprint 8 scope has not yet been fixed.
 
