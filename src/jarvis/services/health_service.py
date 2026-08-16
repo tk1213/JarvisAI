@@ -17,8 +17,16 @@ class HealthService:
 
         results["openai_configuration"] = HealthCheckResult(
             name="openai_configuration",
-            state=HealthState.HEALTHY if openai_ready else HealthState.UNAVAILABLE,
-            reason=None if openai_ready else "OpenAI API credentials are missing.",
+            state=(
+                HealthState.HEALTHY
+                if openai_ready
+                else HealthState.UNAVAILABLE
+            ),
+            reason=(
+                None
+                if openai_ready
+                else "OpenAI API credentials are missing."
+            ),
         )
 
         provider = settings.smart_home_provider.strip().lower()
@@ -35,7 +43,9 @@ class HealthService:
                 smart_home_reason = "Tuya credentials are missing."
         else:
             smart_home_state = HealthState.UNAVAILABLE
-            smart_home_reason = f"Unsupported smart-home provider: {provider}"
+            smart_home_reason = (
+                f"Unsupported smart-home provider: {provider}"
+            )
 
         results["smart_home_configuration"] = HealthCheckResult(
             name="smart_home_configuration",
@@ -83,6 +93,50 @@ class HealthService:
                 critical=False,
             )
 
+        if container.has("audio"):
+            audio = container.get("audio")
+
+            if audio is not None:
+                input_info = getattr(
+                    audio,
+                    "input_info",
+                    None,
+                )
+                output_info = getattr(
+                    audio,
+                    "output_info",
+                    None,
+                )
+
+                if (
+                    input_info is not None
+                    and output_info is not None
+                ):
+                    results["audio"].details = {
+                        "input": {
+                            "index": input_info.index,
+                            "name": input_info.name,
+                            "host_api": input_info.host_api,
+                            "sample_rate": (
+                                input_info.default_sample_rate
+                            ),
+                            "max_input_channels": (
+                                input_info.max_input_channels
+                            ),
+                        },
+                        "output": {
+                            "index": output_info.index,
+                            "name": output_info.name,
+                            "host_api": output_info.host_api,
+                            "sample_rate": (
+                                output_info.default_sample_rate
+                            ),
+                            "max_output_channels": (
+                                output_info.max_output_channels
+                            ),
+                        },
+                    }
+
         smart_home_adapter_available = (
             container.has("smart_home_adapter")
             and container.get("smart_home_adapter") is not None
@@ -114,7 +168,6 @@ class HealthService:
                     "smart_home"
                 ),
             )
-
         else:
             smart_home = container.get(
                 "smart_home"
@@ -148,25 +201,42 @@ class HealthService:
 
         return results
 
-    async def full_readiness(self) -> dict[str, HealthCheckResult]:
+    async def full_readiness(
+        self,
+    ) -> dict[str, HealthCheckResult]:
         configuration = await self.readiness()
         runtime = await self.runtime_readiness()
-        return {**configuration, **runtime}
 
-    async def operational_diagnostics(self) -> dict[str, HealthCheckResult]:
+        return {
+            **configuration,
+            **runtime,
+        }
+
+    async def operational_diagnostics(
+        self,
+    ) -> dict[str, HealthCheckResult]:
         diagnostics = await self.diagnostics()
         readiness = await self.full_readiness()
-        return {**diagnostics, **readiness}
 
-    async def is_operationally_ready(self) -> bool:
+        return {
+            **diagnostics,
+            **readiness,
+        }
+
+    async def is_operationally_ready(
+        self,
+    ) -> bool:
         results = await self.operational_diagnostics()
+
         return all(
             result.passed
             for result in results.values()
             if result.critical
         )
 
-    async def diagnostics(self) -> dict[str, HealthCheckResult]:
+    async def diagnostics(
+        self,
+    ) -> dict[str, HealthCheckResult]:
         results: dict[str, HealthCheckResult] = {}
 
         service_container_healthy = (
@@ -186,7 +256,10 @@ class HealthService:
             reason=(
                 None
                 if service_container_healthy
-                else "Required services are missing from the container."
+                else (
+                    "Required services are missing "
+                    "from the container."
+                )
             ),
         )
 
@@ -195,6 +268,7 @@ class HealthService:
 
         if container.has("database"):
             database = container.get("database")
+
             try:
                 database_healthy = await database.health_check()
             except Exception as exc:  # noqa: BLE001
@@ -203,32 +277,56 @@ class HealthService:
                     f"{type(exc).__name__}: {exc}"
                 )
         else:
-            database_reason = "Database service is unavailable."
+            database_reason = (
+                "Database service is unavailable."
+            )
 
         results["database"] = HealthCheckResult(
             name="database",
-            state=HealthState.HEALTHY if database_healthy else HealthState.UNAVAILABLE,
+            state=(
+                HealthState.HEALTHY
+                if database_healthy
+                else HealthState.UNAVAILABLE
+            ),
             reason=(
                 None
                 if database_healthy
-                else (database_reason or "Database health check failed.")
+                else (
+                    database_reason
+                    or "Database health check failed."
+                )
             ),
         )
 
-        heartbeat_task_running = "heartbeat" in task_manager.list_tasks()
+        heartbeat_task_running = (
+            "heartbeat" in task_manager.list_tasks()
+        )
         heartbeat_service_running = False
 
         if container.has("heartbeat"):
-            heartbeat_service = container.get("heartbeat")
+            heartbeat_service = container.get(
+                "heartbeat"
+            )
             heartbeat_service_running = bool(
-                getattr(heartbeat_service, "running", False)
+                getattr(
+                    heartbeat_service,
+                    "running",
+                    False,
+                )
             )
 
-        heartbeat_healthy = heartbeat_task_running and heartbeat_service_running
+        heartbeat_healthy = (
+            heartbeat_task_running
+            and heartbeat_service_running
+        )
 
         results["heartbeat_task"] = HealthCheckResult(
             name="heartbeat_task",
-            state=HealthState.HEALTHY if heartbeat_healthy else HealthState.UNAVAILABLE,
+            state=(
+                HealthState.HEALTHY
+                if heartbeat_healthy
+                else HealthState.UNAVAILABLE
+            ),
             reason=(
                 None
                 if heartbeat_healthy
@@ -240,15 +338,28 @@ class HealthService:
             ),
         )
 
-        system_healthy = container.has("system") and container.get("system") is not None
+        system_healthy = (
+            container.has("system")
+            and container.get("system") is not None
+        )
 
         results["system_service"] = HealthCheckResult(
             name="system_service",
-            state=HealthState.HEALTHY if system_healthy else HealthState.UNAVAILABLE,
-            reason=None if system_healthy else "System service is unavailable.",
+            state=(
+                HealthState.HEALTHY
+                if system_healthy
+                else HealthState.UNAVAILABLE
+            ),
+            reason=(
+                None
+                if system_healthy
+                else "System service is unavailable."
+            ),
         )
 
-        resilience_healthy = container.has("resilience_runtime")
+        resilience_healthy = container.has(
+            "resilience_runtime"
+        )
 
         results["resilience_runtime"] = HealthCheckResult(
             name="resilience_runtime",
@@ -266,11 +377,19 @@ class HealthService:
 
         return results
 
-    async def check(self) -> dict[str, bool]:
+    async def check(
+        self,
+    ) -> dict[str, bool]:
         diagnostics = await self.diagnostics()
-        return {name: result.passed for name, result in diagnostics.items()}
 
-    async def details(self) -> dict[str, Any]:
+        return {
+            name: result.passed
+            for name, result in diagnostics.items()
+        }
+
+    async def details(
+        self,
+    ) -> dict[str, Any]:
         checks = await self.check()
 
         details: dict[str, Any] = {
@@ -279,23 +398,42 @@ class HealthService:
         }
 
         if container.has("resilience_runtime"):
-            runtime = container.resolve("resilience_runtime", ResilienceRuntime)
+            runtime = container.resolve(
+                "resilience_runtime",
+                ResilienceRuntime,
+            )
             snapshot = runtime.snapshot()
 
             details["resilience"] = {
                 "healthy": snapshot.healthy,
                 "summary": snapshot.summary,
                 "metrics": {
-                    "plans_started": snapshot.metrics.plans_started,
-                    "plans_completed": snapshot.metrics.plans_completed,
-                    "plans_failed": snapshot.metrics.plans_failed,
-                    "steps_started": snapshot.metrics.steps_started,
-                    "steps_completed": snapshot.metrics.steps_completed,
-                    "steps_failed": snapshot.metrics.steps_failed,
+                    "plans_started": (
+                        snapshot.metrics.plans_started
+                    ),
+                    "plans_completed": (
+                        snapshot.metrics.plans_completed
+                    ),
+                    "plans_failed": (
+                        snapshot.metrics.plans_failed
+                    ),
+                    "steps_started": (
+                        snapshot.metrics.steps_started
+                    ),
+                    "steps_completed": (
+                        snapshot.metrics.steps_completed
+                    ),
+                    "steps_failed": (
+                        snapshot.metrics.steps_failed
+                    ),
                     "retries": snapshot.metrics.retries,
                     "timeouts": snapshot.metrics.timeouts,
-                    "circuit_rejections": snapshot.metrics.circuit_rejections,
-                    "bulkhead_rejections": snapshot.metrics.bulkhead_rejections,
+                    "circuit_rejections": (
+                        snapshot.metrics.circuit_rejections
+                    ),
+                    "bulkhead_rejections": (
+                        snapshot.metrics.bulkhead_rejections
+                    ),
                     "capability_failures": dict(
                         snapshot.metrics.capability_failures
                     ),
@@ -304,6 +442,8 @@ class HealthService:
 
         return details
 
-    async def is_healthy(self) -> bool:
+    async def is_healthy(
+        self,
+    ) -> bool:
         results = await self.check()
         return all(results.values())

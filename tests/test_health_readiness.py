@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from jarvis.audio.device_selection import AudioDeviceInfo
 from jarvis.core.container import container
 from jarvis.services.health_contracts import HealthState
 from jarvis.services.health_service import HealthService
@@ -14,6 +15,28 @@ class ConnectedSmartHome:
 class DisconnectedSmartHome:
     connected = False
 
+class DiagnosticAudioManager:
+    @property
+    def input_info(self) -> AudioDeviceInfo:
+        return AudioDeviceInfo(
+            index=18,
+            name="Desktop Microphone (RØDE NT-USB Mini)",
+            host_api="Windows WASAPI",
+            max_input_channels=2,
+            max_output_channels=0,
+            default_sample_rate=48000,
+        )
+
+    @property
+    def output_info(self) -> AudioDeviceInfo:
+        return AudioDeviceInfo(
+            index=16,
+            name="Speakers (Realtek(R) Audio)",
+            host_api="Windows WASAPI",
+            max_input_channels=0,
+            max_output_channels=2,
+            default_sample_rate=48000,
+        )
 
 @pytest.mark.asyncio
 async def test_openai_readiness_is_healthy_with_credentials(
@@ -689,6 +712,55 @@ async def test_missing_voice_runtime_does_not_fail_operational_readiness(
         service = HealthService()
 
         assert await service.is_operationally_ready() is True
+
+    finally:
+        container.clear()
+
+        for name, registered_service in existing.items():
+            container.register(
+                name,
+                registered_service,
+            )
+
+@pytest.mark.asyncio
+async def test_audio_runtime_reports_selected_device_details() -> None:
+    existing = dict(
+        container._services  # type: ignore[attr-defined]
+    )
+
+    try:
+        container.clear()
+
+        container.register(
+            "audio",
+            DiagnosticAudioManager(),
+        )
+
+        service = HealthService()
+        results = await service.runtime_readiness()
+
+        audio = results["audio"]
+
+        assert audio.state is HealthState.HEALTHY
+        assert audio.passed is True
+        assert audio.reason is None
+
+        assert audio.details == {
+            "input": {
+                "index": 18,
+                "name": "Desktop Microphone (RØDE NT-USB Mini)",
+                "host_api": "Windows WASAPI",
+                "sample_rate": 48000,
+                "max_input_channels": 2,
+            },
+            "output": {
+                "index": 16,
+                "name": "Speakers (Realtek(R) Audio)",
+                "host_api": "Windows WASAPI",
+                "sample_rate": 48000,
+                "max_output_channels": 2,
+            },
+        }
 
     finally:
         container.clear()

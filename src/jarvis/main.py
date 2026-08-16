@@ -13,6 +13,7 @@ from jarvis.services.assistant_runtime_service import (
 )
 from jarvis.services.conversation_manager import ConversationManager
 from jarvis.services.health_contracts import (
+    HealthCheckResult,
     HealthState,
 )
 from jarvis.services.memory_service import MemoryService
@@ -215,6 +216,55 @@ def _doctor_status_label(
 
     return "FAIL"
 
+def _print_doctor_details(
+    check_name: str,
+    result: HealthCheckResult,
+) -> None:
+    if check_name != "audio":
+        return
+
+    input_details = result.details.get(
+        "input"
+    )
+    output_details = result.details.get(
+        "output"
+    )
+
+    if isinstance(
+        input_details,
+        dict,
+    ):
+        print(
+            "       Input : "
+            f"[{input_details.get('index')}] "
+            f"{input_details.get('name')}"
+        )
+        print(
+            "       API   : "
+            f"{input_details.get('host_api')}"
+        )
+        print(
+            "       Rate  : "
+            f"{input_details.get('sample_rate')} Hz"
+        )
+
+    if isinstance(
+        output_details,
+        dict,
+    ):
+        print(
+            "       Output: "
+            f"[{output_details.get('index')}] "
+            f"{output_details.get('name')}"
+        )
+        print(
+            "       API   : "
+            f"{output_details.get('host_api')}"
+        )
+        print(
+            "       Rate  : "
+            f"{output_details.get('sample_rate')} Hz"
+        )
 
 async def doctor() -> bool:
     print("=" * 40)
@@ -239,6 +289,11 @@ async def doctor() -> bool:
 
             if result.reason:
                 print(f"       Reason: {result.reason}")
+
+            _print_doctor_details(
+                check_name,
+                result,
+            )
 
         healthy = all(result.passed for result in results.values() if result.critical)
 

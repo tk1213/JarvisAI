@@ -124,3 +124,56 @@ async def test_doctor_warns_for_noncritical_degraded_check(
     assert "[WARN] optional_component" in output
     assert "Reason: Optional feature degraded." in output
     assert "Overall Status: HEALTHY" in output
+
+@pytest.mark.asyncio
+async def test_doctor_prints_audio_device_details(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    health = Mock()
+    health.operational_diagnostics = AsyncMock(
+        return_value={
+            "audio": HealthCheckResult(
+                name="audio",
+                state=HealthState.HEALTHY,
+                details={
+                    "input": {
+                        "index": 18,
+                        "name": "Desktop Microphone (RØDE NT-USB Mini)",
+                        "host_api": "Windows WASAPI",
+                        "sample_rate": 48000,
+                        "max_input_channels": 2,
+                    },
+                    "output": {
+                        "index": 16,
+                        "name": "Speakers (Realtek(R) Audio)",
+                        "host_api": "Windows WASAPI",
+                        "sample_rate": 48000,
+                        "max_output_channels": 2,
+                    },
+                },
+            ),
+        }
+    )
+
+    app = AsyncMock()
+
+    with (
+        patch(
+            "jarvis.main.JarvisApplication",
+            return_value=app,
+        ),
+        patch(
+            "jarvis.main.container.get",
+            return_value=health,
+        ),
+    ):
+        result = await doctor()
+
+    output = capsys.readouterr().out
+
+    assert result is True
+    assert "[PASS] audio" in output
+    assert "Desktop Microphone (RØDE NT-USB Mini)" in output
+    assert "Windows WASAPI" in output
+    assert "48000 Hz" in output
+    assert "Speakers (Realtek(R) Audio)" in output
