@@ -155,3 +155,38 @@ def test_sounddevice_shape_is_normalized() -> None:
     assert info.name == "USB Mic"
     assert info.host_api == "Windows WASAPI"
     assert info.default_sample_rate == 44100
+
+def test_prefers_wasapi_for_same_physical_microphone() -> None:
+    catalog = AudioDeviceCatalog(
+        (
+            device(
+                1,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "MME",
+                inputs=1,
+            ),
+            device(
+                8,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "Windows DirectSound",
+                inputs=1,
+            ),
+            device(
+                18,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "Windows WASAPI",
+                inputs=2,
+            ),
+            device(
+                25,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "Windows WDM-KS",
+                inputs=1,
+            ),
+        )
+    )
+
+    selected = catalog.select_input()
+
+    assert selected.index == 18
+    assert selected.host_api == "Windows WASAPI"
