@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from jarvis.core.logger import log
 from jarvis.services.wake_word_service import WakeWordService
 from jarvis.wake.activation import (
     WakeActivationResult,
@@ -63,12 +64,14 @@ class WakeActivationBoundary:
                 else 0
             )
 
-            print()
-            print(
-                "[WAKE CANCEL DIAGNOSTIC] "
-                f"parent_cancelling={parent_cancelling}, "
-                f"wake_task_cancelled={wake_task.cancelled()}, "
-                f"wake_service_closed={self._wake_word.closed}"
+            log.debug(
+                "Wake activation cancelled: "
+                "parent_cancelling={}, "
+                "wake_task_cancelled={}, "
+                "wake_service_closed={}",
+                parent_cancelling,
+                wake_task.cancelled(),
+                self._wake_word.closed,
             )
 
             raise
