@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : cb126d3
+Commit          : 78f6670
 Branch          : main
-Full regression : 952 passed
+Full regression : 956 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -282,10 +282,10 @@ Sprint 8.2 voice Smart Home confirmation safety integration:
 Sprint 8.2 validation:
 
 Ruff                              : PASS
-Full regression                   : 951 passed
-Voice confirmation integration    : PASS
-Voice cancellation integration    : PASS
-Voice read-only pending query     : PASS
+Full regression                   : 954 passed
+Audio runtime diagnostics         : PASS
+Doctor audio endpoint reporting   : PASS
+Production doctor live gate       : PASS
 
 Sprint 8.3 voice Tuya live safety validation:
 
@@ -331,6 +331,28 @@ Audio runtime diagnostics         : PASS
 Doctor audio endpoint reporting   : PASS
 Production doctor live gate       : PASS
 
+Sprint 8.5 resilience runtime diagnostics and observability hardening:
+
+- exposed the production resilience runtime snapshot through structured
+  health diagnostics
+- added explicit degraded resilience health reporting while preserving
+  noncritical operational-health semantics
+- added doctor reporting for resilience summary, plan and step metrics,
+  retries, timeouts, circuit-breaker rejections, bulkhead rejections,
+  and capability failure counts
+- retained backward compatibility with generic placeholder resilience
+  runtime services that do not expose snapshot diagnostics
+- preserved existing operational readiness behavior while improving
+  resilience observability
+
+Sprint 8.5 validation:
+
+Ruff                                : PASS
+Full regression                     : 956 passed
+Resilience runtime health reporting : PASS
+Degraded resilience diagnostics     : PASS
+Doctor resilience reporting         : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -347,6 +369,9 @@ and physical Tuya integration path.
 
 Sprint 8.4 audio-device diagnostics and observability hardening has
 also been completed and validated.
+
+Sprint 8.5 resilience runtime diagnostics and observability hardening
+has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 

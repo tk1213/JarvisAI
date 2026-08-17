@@ -17,6 +17,7 @@ Sprint 8.1: Runtime Reliability and Smart Home Confirmation Safety - COMPLETE
 Sprint 8.2: Voice Smart Home Confirmation Safety Integration - COMPLETE
 Sprint 8.3: Voice Tuya Live Safety Validation - COMPLETE
 Sprint 8.4: Audio Device Diagnostics and Observability Hardening - COMPLETE
+Sprint 8.5: Resilience Runtime Diagnostics and Observability - COMPLETE
 ```
 
 Current release checkpoint:
@@ -30,18 +31,19 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : 8c09add
+Commit          : 78f6670
 Branch          : main
 Remote          : origin/main
-Full regression : 954 passed
+Full regression : 956 passed
 Ruff            : PASS
 ```
 
 The `v0.7.0-alpha.1` tag remains the validated Sprint 7 release
 checkpoint. Current `main` contains additional post-release reliability,
 architecture, Sprint 8.1 runtime safety, Sprint 8.2 voice confirmation
-integration, Sprint 8.3 voice Tuya live safety validation, and Sprint
-8.4 audio-device diagnostics and observability hardening that have not
+integration, Sprint 8.3 voice Tuya live safety validation, Sprint 8.4
+audio-device diagnostics and observability hardening, and Sprint 8.5
+resilience runtime diagnostics and observability hardening that have not
 yet been assigned a new release tag.
 
 
@@ -1111,8 +1113,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : cb126d3
-Full regression                     : 952 passed
+Commit                              : 78f6670
+Full regression                     : 956 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1125,6 +1127,9 @@ Voice read-only pending query       : PASS
 Microphone -> STT live gate         : PASS
 Voice Tuya confirmation live gate   : PASS
 Voice Tuya cancellation live gate   : PASS
+Resilience runtime health reporting : PASS
+Degraded resilience diagnostics     : PASS
+Doctor resilience reporting         : PASS
 ```
 
 Sprint 8.3 additionally validates the production voice path against the
@@ -1223,6 +1228,9 @@ physical Tuya control path.
 Sprint 8.4 audio-device diagnostics and observability hardening has
 also been completed and validated.
 
+Sprint 8.5 resilience runtime diagnostics and observability hardening
+has also been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1252,6 +1260,27 @@ Sprint 8.4 validation confirms that:
 - the validated production speaker output remains on Windows WASAPI
 - operational health semantics remain unchanged
 - the complete automated regression suite remains green
+
+Sprint 8.5 hardens runtime resilience observability by making the
+production resilience snapshot part of structured health diagnostics.
+
+The system doctor can now distinguish a healthy resilience runtime from
+a degraded runtime and report the current resilience summary, plan and
+step counters, retries, timeouts, circuit-breaker rejections, bulkhead
+rejections, and capability failure counts.
+
+A degraded resilience snapshot is reported as a noncritical warning so
+historical resilience events do not automatically make the overall
+JarvisAI runtime unhealthy.
+
+Sprint 8.5 validation confirms that:
+
+- resilience diagnostics use the runtime snapshot when available
+- degraded resilience is surfaced as a structured DEGRADED health state
+- degraded resilience remains noncritical to overall operational health
+- generic placeholder runtime services remain backward compatible
+- the doctor command exposes resilience summary and metrics
+- the complete automated regression suite remains green at 956 tests
 
 No Sprint 8 feature should be considered complete until its
 implementation, automated regression, documentation, and relevant live
