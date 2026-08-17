@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : 78f6670
+Commit          : 4d9ba0f
 Branch          : main
-Full regression : 956 passed
+Full regression : 962 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -353,6 +353,28 @@ Resilience runtime health reporting : PASS
 Degraded resilience diagnostics     : PASS
 Doctor resilience reporting         : PASS
 
+
+Sprint 8.6 wake cancellation boundary reliability hardening:
+
+- added explicit regression coverage for active wake-wait cancellation
+  and cleanup
+- validated repeated wake waits after cancellation
+- validated parent-task cancellation propagation
+- preserved concurrent-wait rejection semantics
+- confirmed that cancelling an active boundary wait does not close the
+  wake-word service
+- replaced direct wake cancellation diagnostic console output with the
+  shared structured logging infrastructure
+- preserved existing wake-word detection behavior
+
+Sprint 8.6 validation:
+
+Ruff                            : PASS
+Full regression                 : 962 passed
+Wake-focused regression         : 37 passed
+Wake cancellation boundary      : PASS
+Wake cancellation observability : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -372,6 +394,9 @@ also been completed and validated.
 
 Sprint 8.5 resilience runtime diagnostics and observability hardening
 has also been completed and validated.
+
+Sprint 8.6 wake cancellation boundary reliability hardening has also
+been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 

@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : 78f6670
+Commit          : 4d9ba0f
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 956 passed
+Full regression : 962 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1007,13 +1007,37 @@ Resilience runtime health reporting : PASS
 Degraded resilience diagnostics     : PASS
 Doctor resilience reporting         : PASS
 
+Sprint 8.6 wake cancellation boundary reliability hardening completed:
+
+- added explicit regression coverage for active wake-wait cancellation
+  and cleanup
+- validated that the wake activation boundary can wait again after
+  cancellation
+- validated parent-task cancellation propagation
+- preserved concurrent-wait rejection semantics
+- confirmed that cancelling an active boundary wait does not close the
+  wake-word service
+- replaced direct wake cancellation diagnostic console output with the
+  shared structured logging infrastructure
+- preserved existing wake-word detection behavior
+
+Sprint 8.6 validation baseline:
+
+Ruff                            : PASS
+Full regression                 : 962 passed
+Wake-focused regression         : 37 passed
+Wake cancellation boundary      : PASS
+Wake cancellation observability : PASS
+
+
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
 post-release reliability, architecture hardening, Sprint 8.1 runtime
 safety work, Sprint 8.2 voice confirmation safety integration, Sprint
 8.3 voice Tuya live safety validation, Sprint 8.4 audio-device
-diagnostics and observability hardening, and Sprint 8.5 resilience
-runtime diagnostics and observability hardening that have not yet been
+diagnostics and observability hardening, Sprint 8.5 resilience runtime
+diagnostics and observability hardening, and Sprint 8.6 wake
+cancellation boundary reliability hardening that have not yet been
 assigned a new release tag.
 
 
@@ -1144,6 +1168,9 @@ also been completed and validated.
 
 Sprint 8.5 resilience runtime diagnostics and observability hardening
 has also been completed and validated.
+
+Sprint 8.6 wake cancellation boundary reliability hardening has also
+been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 

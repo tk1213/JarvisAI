@@ -18,6 +18,7 @@ Sprint 8.2: Voice Smart Home Confirmation Safety Integration - COMPLETE
 Sprint 8.3: Voice Tuya Live Safety Validation - COMPLETE
 Sprint 8.4: Audio Device Diagnostics and Observability Hardening - COMPLETE
 Sprint 8.5: Resilience Runtime Diagnostics and Observability - COMPLETE
+Sprint 8.6: Wake Cancellation Boundary Reliability Hardening - COMPLETE
 ```
 
 Current release checkpoint:
@@ -31,15 +32,16 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : 78f6670
+Commit          : 4d9ba0f
 Branch          : main
 Remote          : origin/main
-Full regression : 956 passed
+Full regression : 962 passed
 Ruff            : PASS
 ```
 
 The `v0.7.0-alpha.1` tag remains the validated Sprint 7 release
-checkpoint. Current `main` contains additional post-release reliability,
+checkpoint. Current `main` Sprint 8.6 wake cancellation boundary reliability hardening
+contains additional post-release reliability,
 architecture, Sprint 8.1 runtime safety, Sprint 8.2 voice confirmation
 integration, Sprint 8.3 voice Tuya live safety validation, Sprint 8.4
 audio-device diagnostics and observability hardening, and Sprint 8.5
@@ -1113,8 +1115,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : 78f6670
-Full regression                     : 956 passed
+Commit                              : 4d9ba0f
+Full regression                     : 962 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1130,6 +1132,9 @@ Voice Tuya cancellation live gate   : PASS
 Resilience runtime health reporting : PASS
 Degraded resilience diagnostics     : PASS
 Doctor resilience reporting         : PASS
+Wake cancellation boundary          : PASS
+Wake-focused regression             : 37 passed
+Wake cancellation observability     : PASS
 ```
 
 Sprint 8.3 additionally validates the production voice path against the
@@ -1231,6 +1236,9 @@ also been completed and validated.
 Sprint 8.5 resilience runtime diagnostics and observability hardening
 has also been completed and validated.
 
+Sprint 8.6 wake cancellation boundary reliability hardening has also
+been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1285,6 +1293,29 @@ Sprint 8.5 validation confirms that:
 No Sprint 8 feature should be considered complete until its
 implementation, automated regression, documentation, and relevant live
 validation have passed.
+
+Sprint 8.6 hardens the wake activation cancellation boundary without
+changing wake-word detection behavior.
+
+The wake activation boundary now has explicit regression coverage for
+active-wait cancellation and cleanup, repeated waits after cancellation,
+parent-task cancellation propagation, concurrent-wait rejection, and
+wake-service ownership preservation.
+
+Wake cancellation diagnostics have also been moved from direct console
+printing to the shared structured logging infrastructure so expected
+cancellation control flow does not produce raw diagnostic output.
+
+Sprint 8.6 validation confirms that:
+
+- active wake waits are cancelled and cleaned up correctly
+- the boundary can wait again after cancellation
+- parent-task cancellation continues to propagate
+- concurrent wake waits remain rejected
+- cancelling a boundary wait does not close the wake-word service
+- wake cancellation diagnostics use structured logging
+- wake-focused regression remains green at 37 tests
+- the complete automated regression suite remains green at 962 tests
 ---
 
 # Release History
