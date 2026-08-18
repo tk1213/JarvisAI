@@ -221,7 +221,7 @@ Sprint 6 release checkpoint:
 
 Version : 0.6.0-alpha.1
 Git tag : v0.6.0-alpha.1
-Commit  : b1b2bc0
+Commit  : d99be25
 
 AI Runtime
 
@@ -874,7 +874,7 @@ JarvisAI 0.7.0-alpha.1
 Release checkpoint:
 
 Tag    : v0.7.0-alpha.1
-Commit : 6825df0
+Commit : d99be25
 
 Sprint 7 release quality state:
 
@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : 3e18908
+Commit          : d99be25
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 970 passed
+Full regression : 981 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1079,6 +1079,30 @@ Voice session cleanup               : PASS
 Implementation commit:
 
 3e18908
+
+Sprint 8.9 database transaction cancellation and lifecycle reliability
+hardening completed:
+
+- database transactions now explicitly roll back on external
+  cancellation
+- CancelledError propagation is preserved after rollback
+- cancellation during commit is also covered
+- successful sessions continue to commit normally
+- ordinary failures continue to roll back normally
+- database shutdown lifecycle state is validated for both successful
+  and failed engine disposal
+
+Sprint 8.9 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 981 passed
+Transaction cancellation     : PASS
+Commit cancellation rollback : PASS
+Shutdown lifecycle           : PASS
+
+Implementation commit:
+
+d99be25
 
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional

@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : 4d9ba0f
+Commit          : d99be25
 Branch          : main
-Full regression : 962 passed
+Full regression : 981 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -419,6 +419,26 @@ Continuous voice cancellation       : PASS
 Listening cancellation propagation  : PASS
 Idle-delay cancellation propagation : PASS
 Voice session cleanup               : PASS
+
+Sprint 8.9 database transaction cancellation and lifecycle reliability
+hardening:
+
+- fixed missing explicit rollback when database transactions are
+  cancelled externally
+- preserved CancelledError propagation after rollback
+- added coverage for cancellation during transaction execution
+- added coverage for cancellation during commit
+- validated successful commit and ordinary rollback semantics
+- validated database shutdown state after successful and failed engine
+  disposal
+
+Sprint 8.9 validation:
+
+Ruff                         : PASS
+Full regression              : 981 passed
+Transaction cancellation     : PASS
+Commit cancellation rollback : PASS
+Shutdown lifecycle           : PASS
 
 Next Milestone
 

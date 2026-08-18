@@ -20,6 +20,7 @@ Sprint 8.4: Audio Device Diagnostics and Observability Hardening - COMPLETE
 Sprint 8.5: Resilience Runtime Diagnostics and Observability - COMPLETE
 Sprint 8.6: Wake Cancellation Boundary Reliability Hardening - COMPLETE
 Sprint 8.7: Voice Capture Cancellation Boundary Hardening - COMPLETE
+Sprint 8.9: Database Transaction Cancellation & Lifecycle Reliability Hardening - COMPLETE
 ```
 
 Current release checkpoint:
@@ -27,16 +28,16 @@ Current release checkpoint:
 ```text
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-Commit  : 6825df0
+Commit  : d99be25
 ```
 
 Current post-release development baseline:
 
 ```text
-Commit          : 3e18908
+Commit          : d99be25
 Branch          : main
 Remote          : origin/main
-Full regression : 970 passed
+Full regression : 981 passed
 Ruff            : PASS
 ```
 
@@ -1250,6 +1251,9 @@ been completed and validated.
 Sprint 8.8 continuous voice cancellation semantics hardening has also
 been completed and validated.
 
+Sprint 8.9 database transaction cancellation and lifecycle reliability
+hardening has also been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1378,6 +1382,29 @@ Sprint 8.8 validation confirms that:
 - cancellation during the continuous-voice idle delay is covered
 - existing continuous voice behavior remains compatible
 - the complete automated regression suite remains green at 970 tests
+
+Sprint 8.9 hardens database transaction cancellation semantics and
+database lifecycle reliability.
+
+DatabaseManager session cleanup now explicitly rolls back transactions
+when external asyncio cancellation occurs. CancelledError is preserved
+and re-raised after rollback so cancellation remains observable to the
+caller instead of being converted into normal completion.
+
+Automated coverage also validates cancellation during commit, normal
+commit behavior, rollback after ordinary exceptions, successful
+database shutdown, and truthful started-state preservation when engine
+disposal fails.
+
+Sprint 8.9 validation confirms that:
+
+- successful sessions commit exactly once
+- ordinary transaction failures roll back exactly once
+- external cancellation rolls back before CancelledError propagates
+- cancellation during commit also rolls back
+- successful shutdown disposes the engine and clears started state
+- failed engine disposal preserves the started state
+- the complete automated regression suite remains green at 981 tests
 
 ---
 
