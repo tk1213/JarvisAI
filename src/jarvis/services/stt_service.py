@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import asyncio
+import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TypeVar
 
 import numpy as np
 import soundfile as sf
@@ -16,9 +20,10 @@ from jarvis.audio.signal_diagnostics import (
     AudioSignalAnalyzer,
     AudioSignalDiagnostics,
 )
+from jarvis.core.logger import log
 from jarvis.speech.stt import SpeechToText
 
-
+T = TypeVar("T")
 @dataclass(slots=True, frozen=True)
 class STTTimingDiagnostics:
     calibration_seconds: float = 0.0
@@ -101,15 +106,22 @@ class STTService:
         calibration_seconds = 0.0
         capture_seconds = 0.0
 
+        cancel_event = threading.Event()
+
         if adaptive:
             calibration_started = time.perf_counter()
 
-            calibration = self.recorder.calibrate_noise(
-                calibration_ms=calibration_ms,
-                vad_frame_duration_ms=vad_frame_duration_ms,
-                minimum_threshold=threshold,
-                mad_multiplier=mad_multiplier,
-                minimum_margin=minimum_margin,
+            calibration = await self._run_recorder_worker(
+                lambda: self.recorder.calibrate_noise(
+                    calibration_ms=calibration_ms,
+                    vad_frame_duration_ms=vad_frame_duration_ms,
+                    minimum_threshold=threshold,
+                    mad_multiplier=mad_multiplier,
+                    minimum_margin=minimum_margin,
+                    cancel_event=cancel_event,
+                ),
+                cancel_event=cancel_event,
+                worker_name="jarvis-stt-calibration",
             )
 
             calibration_seconds = (
@@ -117,20 +129,31 @@ class STTService:
                 - calibration_started
             )
 
+            if calibration is None:
+                self._last_timing = STTTimingDiagnostics(
+                    calibration_seconds=calibration_seconds,
+                )
+                return ""
+
             active_threshold = calibration.threshold
 
         capture_started = time.perf_counter()
 
-        audio_file = self.recorder.record_until_silence(
-            output=output,
-            threshold=active_threshold,
-            vad_frame_duration_ms=vad_frame_duration_ms,
-            speech_trigger_ms=speech_trigger_ms,
-            silence_duration_ms=silence_duration_ms,
-            pre_roll_ms=pre_roll_ms,
-            max_wait_seconds=max_wait_seconds,
-            max_record_seconds=max_record_seconds,
-            adaptive=False,
+        audio_file = await self._run_recorder_worker(
+            lambda: self.recorder.record_until_silence(
+                output=output,
+                threshold=active_threshold,
+                vad_frame_duration_ms=vad_frame_duration_ms,
+                speech_trigger_ms=speech_trigger_ms,
+                silence_duration_ms=silence_duration_ms,
+                pre_roll_ms=pre_roll_ms,
+                max_wait_seconds=max_wait_seconds,
+                max_record_seconds=max_record_seconds,
+                adaptive=False,
+                cancel_event=cancel_event,
+            ),
+            cancel_event=cancel_event,
+            worker_name="jarvis-stt-capture",
         )
 
         capture_seconds = (
@@ -197,6 +220,41 @@ class STTService:
             audio_path,
             language=language,
         )
+
+    @staticmethod
+    async def _run_recorder_worker(
+        operation: Callable[[], T],
+        *,
+        cancel_event: threading.Event,
+        worker_name: str,
+    ) -> T:
+        worker = asyncio.create_task(
+            asyncio.to_thread(
+                operation
+            ),
+            name=worker_name,
+        )
+
+        try:
+            return await asyncio.shield(
+                worker
+            )
+
+        except asyncio.CancelledError:
+            cancel_event.set()
+
+            try:
+                await worker
+
+            except Exception as exc:  # noqa: BLE001
+                log.error(
+                    "Recorder worker '{}' failed "
+                    "during cancellation cleanup: {}",
+                    worker_name,
+                    exc,
+                )
+
+            raise
 
     @staticmethod
     def _normalize_for_stt(

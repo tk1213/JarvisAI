@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import queue
+import threading
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -177,7 +178,8 @@ class AudioRecorder:
         minimum_threshold: float = 0.005,
         mad_multiplier: float = 4.0,
         minimum_margin: float = 0.001,
-    ) -> VADCalibration:
+        cancel_event: threading.Event | None = None,
+    ) -> VADCalibration | None:
         if calibration_ms <= 0:
             raise ValueError(
                 "calibration_ms must be greater than zero."
@@ -197,6 +199,12 @@ class AudioRecorder:
             raise ValueError(
                 "minimum_margin cannot be negative."
             )
+
+        if (
+            cancel_event is not None
+            and cancel_event.is_set()
+        ):
+            return None
 
         device = self._audio.input_info
         rate = (
@@ -234,6 +242,12 @@ class AudioRecorder:
             1,
             max_stream_attempts + 1,
         ):
+            if (
+                cancel_event is not None
+                and cancel_event.is_set()
+            ):
+                return None
+
             audio_queue = self._create_audio_queue()
 
             try:
@@ -247,10 +261,32 @@ class AudioRecorder:
                     for _ in range(
                         calibration_frames
                     ):
-                        frame = self._next_callback_frame(
-                            audio_queue,
-                            timeout_seconds=1.0,
-                        )
+                        if (
+                            cancel_event is not None
+                            and cancel_event.is_set()
+                        ):
+                            return None
+
+                        try:
+                            frame = self._next_callback_frame(
+                                audio_queue,
+                                timeout_seconds=0.1,
+                            )
+
+                        except RuntimeError:
+                            if (
+                                cancel_event is not None
+                                and cancel_event.is_set()
+                            ):
+                                return None
+
+                            raise
+
+                        if (
+                            cancel_event is not None
+                            and cancel_event.is_set()
+                        ):
+                            return None
 
                         levels.append(
                             self._rms(
@@ -273,9 +309,21 @@ class AudioRecorder:
                 if attempt >= max_stream_attempts:
                     break
 
-                time.sleep(
-                    rearm_delay_seconds
-                )
+                if cancel_event is not None:
+                    if cancel_event.wait(
+                        rearm_delay_seconds
+                    ):
+                        return None
+                else:
+                    time.sleep(
+                        rearm_delay_seconds
+                    )
+
+        if (
+            cancel_event is not None
+            and cancel_event.is_set()
+        ):
+            return None
 
         if last_error is not None:
             raise RuntimeError(
@@ -343,6 +391,7 @@ class AudioRecorder:
         calibration_ms: int = 500,
         noise_multiplier: float = 1.8,
         noise_margin: float = 0.004,
+        cancel_event: threading.Event | None = None,
     ) -> AudioRecordingResult | None:
         device = self._audio.input_info
         rate = (
@@ -366,6 +415,12 @@ class AudioRecorder:
                 "threshold must be greater than zero."
             )
 
+        if (
+            cancel_event is not None
+            and cancel_event.is_set()
+        ):
+            return None
+
         if adaptive:
             calibration = self.calibrate_noise(
                 calibration_ms=calibration_ms,
@@ -378,7 +433,12 @@ class AudioRecorder:
                     noise_multiplier,
                 ),
                 minimum_margin=noise_margin,
+                cancel_event=cancel_event,
             )
+
+            if calibration is None:
+                return None
+
             threshold = calibration.threshold
 
         trigger_frames = max(
@@ -448,12 +508,25 @@ class AudioRecorder:
             channels=channels,
         ):
             while True:
+                if (
+                    cancel_event is not None
+                    and cancel_event.is_set()
+                ):
+                    return None
+
                 try:
                     frame = self._next_callback_frame(
                         audio_queue,
-                        timeout_seconds=0.5,
+                        timeout_seconds=0.1,
                     )
+
                 except RuntimeError:
+                    if (
+                        cancel_event is not None
+                        and cancel_event.is_set()
+                    ):
+                        return None
+
                     if not triggered:
                         self._last_vad_run = (
                             VADRunDiagnostics(
@@ -466,6 +539,12 @@ class AudioRecorder:
                         return None
 
                     break
+
+                if (
+                    cancel_event is not None
+                    and cancel_event.is_set()
+                ):
+                    return None
 
                 rms = self._rms(
                     frame
@@ -645,6 +724,7 @@ class AudioRecorder:
             frame = audio_queue.get(
                 timeout=timeout_seconds,
             )
+
         except queue.Empty as exc:
             raise RuntimeError(
                 "Timed out waiting for microphone audio."

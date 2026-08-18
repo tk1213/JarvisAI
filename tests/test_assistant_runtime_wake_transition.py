@@ -326,3 +326,57 @@ async def test_runtime_handles_cancellation_without_recovery() -> None:
     wake_word.wait_for_wake_word.assert_awaited_once_with()
 
     assert runtime.running is False
+
+@pytest.mark.asyncio
+async def test_follow_up_timeout_waits_for_voice_cancellation_cleanup() -> None:
+    cleanup_complete = asyncio.Event()
+
+    async def listen_for_text(
+        *,
+        language: str,
+    ) -> str:
+        assert language == "th"
+
+        try:
+            await asyncio.Future()
+
+        finally:
+            await asyncio.sleep(0)
+            cleanup_complete.set()
+
+        return ""
+
+    wake_word = Mock()
+
+    voice = Mock()
+    voice.listen_for_text = AsyncMock(
+        side_effect=listen_for_text,
+    )
+
+    conversation = Mock()
+    conversation.has_pending_smart_home = False
+
+    tts = Mock()
+
+    session = Mock()
+    session.set_state = AsyncMock()
+
+    runtime = AssistantRuntimeService(
+        wake_word=wake_word,
+        voice=voice,
+        conversation=conversation,
+        tts=tts,
+        session=session,
+        follow_up_timeout=0.01,
+        max_follow_up_turns=1,
+        error_retry_delay=0.0,
+    )
+
+    runtime._running = True
+
+    await runtime._handle_follow_up_window(
+        language="th",
+    )
+
+    assert cleanup_complete.is_set()
+    assert voice.listen_for_text.await_count == 1

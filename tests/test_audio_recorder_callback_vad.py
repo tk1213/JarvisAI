@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+import time
 from pathlib import Path
 from typing import ClassVar
 
@@ -202,3 +204,73 @@ def test_callback_vad_rejects_silence() -> None:
 
     assert run is not None
     assert run.triggered is False
+
+def test_callback_vad_can_be_cancelled_cooperatively() -> None:
+    recorder = build_recorder(
+        (
+            (),
+        )
+    )
+
+    cancel_event = threading.Event()
+    result_holder: list[object] = []
+
+    def capture() -> None:
+        result_holder.append(
+            recorder.record_until_silence(
+                threshold=0.005,
+                max_wait_seconds=10.0,
+                adaptive=False,
+                cancel_event=cancel_event,
+            )
+        )
+
+    worker = threading.Thread(
+        target=capture,
+    )
+
+    worker.start()
+
+    time.sleep(0.05)
+    cancel_event.set()
+
+    worker.join(
+        timeout=1.0,
+    )
+
+    assert worker.is_alive() is False
+    assert result_holder == [None]
+
+def test_callback_calibration_can_be_cancelled_cooperatively() -> None:
+    recorder = build_recorder(
+        (
+            (),
+        )
+    )
+
+    cancel_event = threading.Event()
+    result_holder: list[object] = []
+
+    def calibrate() -> None:
+        result_holder.append(
+            recorder.calibrate_noise(
+                calibration_ms=500,
+                cancel_event=cancel_event,
+            )
+        )
+
+    worker = threading.Thread(
+        target=calibrate,
+    )
+
+    worker.start()
+
+    time.sleep(0.05)
+    cancel_event.set()
+
+    worker.join(
+        timeout=1.0,
+    )
+
+    assert worker.is_alive() is False
+    assert result_holder == [None]
