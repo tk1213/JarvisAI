@@ -375,6 +375,29 @@ Wake-focused regression         : 37 passed
 Wake cancellation boundary      : PASS
 Wake cancellation observability : PASS
 
+Sprint 8.7 voice capture cancellation boundary hardening:
+
+- added cooperative cancellation to VAD-driven microphone capture
+- added cooperative cancellation to adaptive noise calibration
+- moved blocking STT recorder operations off the asyncio event loop
+- shielded recorder workers from direct asyncio task cancellation
+- ensured STT cancellation signals the recorder and waits for worker
+  termination before propagating CancelledError
+- validated VoiceService session cleanup after listening cancellation
+- validated assistant follow-up timeout behavior across the voice
+  cancellation boundary
+- preserved normal STT, voice-dialogue, and wake transition behavior
+
+Sprint 8.7 validation:
+
+Ruff                            : PASS
+Full regression                 : 968 passed
+VAD capture cancellation        : PASS
+Calibration cancellation        : PASS
+STT worker cancellation         : PASS
+Voice session cleanup           : PASS
+Follow-up timeout cleanup       : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -396,6 +419,9 @@ Sprint 8.5 resilience runtime diagnostics and observability hardening
 has also been completed and validated.
 
 Sprint 8.6 wake cancellation boundary reliability hardening has also
+been completed and validated.
+
+Sprint 8.7 voice capture cancellation boundary hardening has also
 been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.

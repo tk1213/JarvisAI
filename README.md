@@ -19,6 +19,7 @@ Sprint 8.3: Voice Tuya Live Safety Validation - COMPLETE
 Sprint 8.4: Audio Device Diagnostics and Observability Hardening - COMPLETE
 Sprint 8.5: Resilience Runtime Diagnostics and Observability - COMPLETE
 Sprint 8.6: Wake Cancellation Boundary Reliability Hardening - COMPLETE
+Sprint 8.7: Voice Capture Cancellation Boundary Hardening - COMPLETE
 ```
 
 Current release checkpoint:
@@ -35,7 +36,7 @@ Current post-release development baseline:
 Commit          : 4d9ba0f
 Branch          : main
 Remote          : origin/main
-Full regression : 962 passed
+Full regression : 968 passed
 Ruff            : PASS
 ```
 
@@ -1115,8 +1116,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : 4d9ba0f
-Full regression                     : 962 passed
+Commit                              : cf9ed9e
+Full regression                     : 968 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1239,6 +1240,9 @@ has also been completed and validated.
 Sprint 8.6 wake cancellation boundary reliability hardening has also
 been completed and validated.
 
+Sprint 8.7 voice capture cancellation boundary hardening has also
+been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1316,6 +1320,35 @@ Sprint 8.6 validation confirms that:
 - wake cancellation diagnostics use structured logging
 - wake-focused regression remains green at 37 tests
 - the complete automated regression suite remains green at 962 tests
+
+Sprint 8.7 hardens the production voice capture cancellation boundary
+without changing normal STT or voice-dialogue behavior.
+
+AudioRecorder now supports cooperative cancellation during both
+adaptive noise calibration and VAD-driven speech capture. Cancellation
+is checked while microphone capture is active so the audio stream can
+exit cleanly instead of leaving blocking recorder work behind.
+
+STTService now executes blocking recorder operations outside the
+asyncio event loop. Recorder workers are shielded from direct asyncio
+task cancellation, receive a cooperative cancellation signal, and are
+awaited to termination before CancelledError is propagated.
+
+The cancellation contract is also validated through VoiceService and
+the assistant follow-up timeout boundary so session state returns to
+IDLE and voice cleanup completes before control returns to the runtime.
+
+Sprint 8.7 validation confirms that:
+
+- VAD speech capture supports cooperative cancellation
+- adaptive noise calibration supports cooperative cancellation
+- blocking recorder operations no longer run on the asyncio event loop
+- STT cancellation waits for recorder worker termination
+- microphone capture cleanup completes before cancellation propagates
+- VoiceService restores IDLE state after listening cancellation
+- assistant follow-up timeout waits for voice cancellation cleanup
+- the complete automated regression suite remains green at 968 tests
+
 ---
 
 # Release History
