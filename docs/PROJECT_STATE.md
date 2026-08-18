@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : 4d9ba0f
+Commit          : 3e18908
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 962 passed
+Full regression : 970 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1056,7 +1056,29 @@ Implementation commit:
 
 cf9ed9e
 
+Sprint 8.8 continuous voice cancellation semantics hardening completed:
 
+- preserved external cancellation semantics across
+  VoiceService.run_continuous()
+- continuous voice now propagates CancelledError after cleanup
+- preserved continuous_running reset during cancellation
+- preserved SessionState.IDLE restoration during cancellation
+- added automated coverage for cancellation while waiting for speech
+- added automated coverage for cancellation during idle delay
+- preserved existing continuous voice behavior
+
+Sprint 8.8 validation baseline:
+
+Ruff                                : PASS
+Full regression                     : 970 passed
+Continuous voice cancellation       : PASS
+Listening cancellation propagation  : PASS
+Idle-delay cancellation propagation : PASS
+Voice session cleanup               : PASS
+
+Implementation commit:
+
+3e18908
 
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
@@ -1201,6 +1223,9 @@ Sprint 8.6 wake cancellation boundary reliability hardening has also
 been completed and validated.
 
 Sprint 8.7 voice capture cancellation boundary hardening has also
+been completed and validated.
+
+Sprint 8.8 continuous voice cancellation semantics hardening has also
 been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.

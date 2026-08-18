@@ -33,10 +33,10 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : 4d9ba0f
+Commit          : 3e18908
 Branch          : main
 Remote          : origin/main
-Full regression : 968 passed
+Full regression : 970 passed
 Ruff            : PASS
 ```
 
@@ -1116,8 +1116,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : cf9ed9e
-Full regression                     : 968 passed
+Commit                              : 3e18908
+Full regression                     : 970 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1136,6 +1136,10 @@ Doctor resilience reporting         : PASS
 Wake cancellation boundary          : PASS
 Wake-focused regression             : 37 passed
 Wake cancellation observability     : PASS
+Continuous voice cancellation       : PASS
+Listening cancellation propagation  : PASS
+Idle-delay cancellation propagation : PASS
+Voice session cleanup               : PASS
 ```
 
 Sprint 8.3 additionally validates the production voice path against the
@@ -1243,6 +1247,9 @@ been completed and validated.
 Sprint 8.7 voice capture cancellation boundary hardening has also
 been completed and validated.
 
+Sprint 8.8 continuous voice cancellation semantics hardening has also
+been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1348,6 +1355,29 @@ Sprint 8.7 validation confirms that:
 - VoiceService restores IDLE state after listening cancellation
 - assistant follow-up timeout waits for voice cancellation cleanup
 - the complete automated regression suite remains green at 968 tests
+
+Sprint 8.8 hardens continuous voice cancellation semantics so external
+asyncio cancellation remains observable to the caller while runtime
+cleanup is still completed correctly.
+
+VoiceService.run_continuous() now propagates CancelledError instead of
+converting external task cancellation into normal completion. The
+continuous-running flag is cleared and the voice session returns to
+IDLE before cancellation leaves the runtime boundary.
+
+Automated coverage validates cancellation both while continuous voice
+is blocked waiting for user speech and while the runtime is sleeping
+during its idle delay.
+
+Sprint 8.8 validation confirms that:
+
+- external continuous-voice cancellation propagates CancelledError
+- continuous_running is cleared during cancellation cleanup
+- SessionState returns to IDLE before cancellation completes
+- cancellation while waiting for voice input is covered
+- cancellation during the continuous-voice idle delay is covered
+- existing continuous voice behavior remains compatible
+- the complete automated regression suite remains green at 970 tests
 
 ---
 

@@ -208,7 +208,7 @@ reliability baseline:
 
 Version : 0.6.0-alpha.1
 Git tag : v0.6.0-alpha.1
-Commit  : b1b2bc0
+Commit  : 3e18908
 
 Sprint 7 builds on that validated voice-runtime baseline.
 
@@ -218,7 +218,7 @@ Compile validation          : PASS
 Ruff                        : PASS
 Tuya adapter contract       : 73 passed
 Smart Home regression       : 104 passed
-Full regression             : 882 passed
+Full regression             : 970 passed
 Tuya read-only live gate    : PASS
 Tuya physical control gate  : PASS
 Original-state restoration  : PASS
@@ -398,6 +398,28 @@ STT worker cancellation         : PASS
 Voice session cleanup           : PASS
 Follow-up timeout cleanup       : PASS
 
+Sprint 8.8 continuous voice cancellation semantics hardening:
+
+- preserved external asyncio cancellation across the continuous voice
+  runtime boundary
+- changed VoiceService.run_continuous() to propagate CancelledError
+  after cleanup instead of converting cancellation into normal
+  completion
+- preserved continuous_running cleanup during cancellation
+- preserved SessionState.IDLE restoration during cancellation
+- added automated coverage for cancellation while waiting for speech
+- added automated coverage for cancellation during idle delay
+- preserved existing continuous voice behavior
+
+Sprint 8.8 validation:
+
+Ruff                                : PASS
+Full regression                     : 970 passed
+Continuous voice cancellation       : PASS
+Listening cancellation propagation  : PASS
+Idle-delay cancellation propagation : PASS
+Voice session cleanup               : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -422,6 +444,9 @@ Sprint 8.6 wake cancellation boundary reliability hardening has also
 been completed and validated.
 
 Sprint 8.7 voice capture cancellation boundary hardening has also
+been completed and validated.
+
+Sprint 8.8 continuous voice cancellation semantics hardening has also
 been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
