@@ -74,6 +74,17 @@ class BrokenSkill(GoodSkill):
         )
 
 
+class BrokenShutdownSkill(GoodSkill):
+    async def shutdown(self) -> None:
+        self._events.append(
+            f"stop:{self._name}"
+        )
+
+        raise RuntimeError(
+            "shutdown exploded"
+        )
+
+
 @pytest.mark.asyncio
 async def test_broken_skill_does_not_stop_other_skills() -> None:
     events: list[str] = []
@@ -197,3 +208,43 @@ async def test_failed_skill_health_is_reported() -> None:
     assert health["broken"]["healthy"] is False
     assert health["broken"]["enabled"] is False
     assert health["broken"]["error"] == "startup exploded"
+
+
+@pytest.mark.asyncio
+async def test_shutdown_failure_does_not_block_other_started_skills() -> None:
+    events: list[str] = []
+
+    manager = SkillManager()
+
+    manager.register(
+        GoodSkill(
+            "first",
+            events,
+        )
+    )
+    manager.register(
+        BrokenShutdownSkill(
+            "broken",
+            events,
+        )
+    )
+    manager.register(
+        GoodSkill(
+            "last",
+            events,
+        )
+    )
+
+    await manager.startup()
+    await manager.shutdown()
+
+    assert events == [
+        "start:broken",
+        "start:first",
+        "start:last",
+        "stop:last",
+        "stop:first",
+        "stop:broken",
+    ]
+
+    assert manager.list_started_skills() == []

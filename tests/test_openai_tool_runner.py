@@ -374,3 +374,49 @@ async def test_runner_enforces_total_timeout() -> None:
         await runner.run(
             "Check health"
         )
+
+@pytest.mark.asyncio
+async def test_runner_preserves_external_cancellation() -> None:
+    entered = asyncio.Event()
+
+    class BlockingResponsesService:
+        async def create_turn(
+            self,
+            **kwargs,
+        ) -> ResponsesTurnResult:
+            del kwargs
+
+            entered.set()
+            await asyncio.Future()
+
+            return final_response()
+
+    runner = OpenAIToolCallingRunner(
+        ai=FakeAI(),  # type: ignore[arg-type]
+        definitions=FakeDefinitions(  # type: ignore[arg-type]
+            [
+                {
+                    "type": "function",
+                    "name": "system_ping",
+                }
+            ]
+        ),
+        executor=FakeExecutor(),  # type: ignore[arg-type]
+        responses_service=BlockingResponsesService(),  # type: ignore[arg-type]
+        run_timeout_seconds=10.0,
+    )
+
+    task = asyncio.create_task(
+        runner.run(
+            "Check health"
+        )
+    )
+
+    await entered.wait()
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await task

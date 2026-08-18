@@ -86,3 +86,67 @@ async def test_second_execution_fails_fast_on_bulkhead() -> None:
         second_result.step_results[0].error
         == "capability concurrency limit reached"
     )
+
+@pytest.mark.asyncio
+async def test_external_cancellation_releases_bulkhead_slot() -> None:
+    entered = asyncio.Event()
+    calls = 0
+
+    class Router:
+        async def execute_request(
+            self,
+            request,
+        ) -> Any:
+            nonlocal calls
+            del request
+
+            calls += 1
+
+            if calls == 1:
+                entered.set()
+                await asyncio.Future()
+
+            return {"ok": True}
+
+    bulkhead = CapabilityBulkhead(
+        BulkheadPolicy(
+            max_concurrent_per_capability=1,
+            acquire_timeout_seconds=0.05,
+        )
+    )
+
+    executor = PlanExecutor(
+        router=Router(),  # type: ignore[arg-type]
+        bulkhead=bulkhead,
+    )
+
+    first_plan = make_plan()
+
+    task = asyncio.create_task(
+        executor.execute(
+            first_plan
+        )
+    )
+
+    await entered.wait()
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await task
+
+    assert first_plan.status is PlanStatus.CANCELLED
+
+    second_plan = make_plan()
+
+    result = await asyncio.wait_for(
+        executor.execute(
+            second_plan
+        ),
+        timeout=1.0,
+    )
+
+    assert result.success is True
+    assert calls == 2
