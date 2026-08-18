@@ -171,6 +171,7 @@ class VoiceService:
 
         except asyncio.CancelledError:
             self._continuous_running = False
+            raise
 
         finally:
             self._continuous_running = False
@@ -406,3 +407,4 @@ class VoiceService:
         return " ".join(
             normalized.split()
         )
+
