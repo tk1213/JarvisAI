@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
 from jarvis.audio.player import AudioPlayer
+from jarvis.core.logger import log
 from jarvis.speech.tts import TextToSpeech
 
 
@@ -85,10 +87,34 @@ class TTSService:
 
             playback_started_at = time.perf_counter()
 
-        self.player.play(
-            audio_file,
-            on_playback_start=mark_playback_start,
+        playback_task = asyncio.create_task(
+            asyncio.to_thread(
+                self.player.play,
+                audio_file,
+                on_playback_start=mark_playback_start,
+            ),
+            name="jarvis-tts-playback",
         )
+
+        try:
+            await asyncio.shield(
+                playback_task
+            )
+
+        except asyncio.CancelledError:
+            self.player.stop()
+
+            try:
+                await playback_task
+
+            except Exception as exc:  # noqa: BLE001
+                log.error(
+                    "TTS playback worker failed "
+                    "during cancellation cleanup: {!r}",
+                    exc,
+                )
+
+            raise
 
         playback_finished_at = time.perf_counter()
 
