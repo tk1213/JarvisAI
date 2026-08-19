@@ -21,23 +21,25 @@ Sprint 8.5: Resilience Runtime Diagnostics and Observability - COMPLETE
 Sprint 8.6: Wake Cancellation Boundary Reliability Hardening - COMPLETE
 Sprint 8.7: Voice Capture Cancellation Boundary Hardening - COMPLETE
 Sprint 8.9: Database Transaction Cancellation & Lifecycle Reliability Hardening - COMPLETE
+Sprint 8.10: TTS Playback Async & Cancellation Boundary Hardening - COMPLETE
 ```
+
 
 Current release checkpoint:
 
 ```text
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-Commit  : d99be25
+Commit  : a9d208d
 ```
 
 Current post-release development baseline:
 
 ```text
-Commit          : d99be25
+Commit          : a9d208d
 Branch          : main
 Remote          : origin/main
-Full regression : 981 passed
+Full regression : 986 passed
 Ruff            : PASS
 ```
 
@@ -1254,6 +1256,9 @@ been completed and validated.
 Sprint 8.9 database transaction cancellation and lifecycle reliability
 hardening has also been completed and validated.
 
+Sprint 8.10 TTS playback async and cancellation boundary hardening has
+also been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1405,6 +1410,31 @@ Sprint 8.9 validation confirms that:
 - successful shutdown disposes the engine and clears started state
 - failed engine disposal preserves the started state
 - the complete automated regression suite remains green at 981 tests
+
+Sprint 8.10 hardens the TTS playback async and cancellation boundary.
+
+TTSService no longer runs blocking AudioPlayer playback directly on the
+asyncio event-loop thread. Playback now runs in a dedicated worker while
+the async caller retains explicit ownership of that worker.
+
+When external cancellation occurs during active playback, TTSService
+stops the player, waits for the playback worker to terminate, and then
+re-raises CancelledError so cancellation remains observable to the
+caller.
+
+Cancellation during TTS generation is also preserved without stopping
+a player that has not yet begun playback.
+
+Sprint 8.10 validation confirms that:
+
+- blocking playback no longer runs on the asyncio event-loop thread
+- external playback cancellation calls AudioPlayer.stop()
+- playback worker termination is awaited before cancellation propagates
+- CancelledError remains observable to callers
+- cancellation during TTS generation does not stop inactive playback
+- existing wake, voice-turn, dialogue, and assistant runtime behavior
+  remains compatible
+- the complete automated regression suite remains green at 986 tests
 
 ---
 

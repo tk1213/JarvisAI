@@ -13,7 +13,7 @@ Release checkpoint:
 
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-Commit  : 6825df0
+Commit  : a9d208d
 
 Sprint 7 builds on the validated Sprint 6 voice-runtime baseline.
 
@@ -1103,6 +1103,31 @@ Shutdown lifecycle           : PASS
 Implementation commit:
 
 d99be25
+
+Sprint 8.10 TTS playback async and cancellation boundary hardening
+completed:
+
+- blocking AudioPlayer playback no longer executes on the asyncio
+  event-loop thread
+- TTSService now owns a dedicated playback worker
+- external cancellation stops active playback
+- playback worker termination is awaited before cancellation propagates
+- CancelledError semantics are preserved
+- cancellation during TTS generation does not stop inactive playback
+- existing wake and voice runtime behavior remains compatible
+
+Sprint 8.10 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 986 passed
+Async playback boundary      : PASS
+Playback cancellation        : PASS
+Playback worker cleanup      : PASS
+Generation cancellation      : PASS
+
+Implementation commit:
+
+a9d208d
 
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional

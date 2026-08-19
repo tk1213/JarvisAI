@@ -195,7 +195,7 @@ Release Checkpoint
 
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-Commit  : 6825df0
+Commit  : a9d208d
 
 Python packaging may display:
 
@@ -440,6 +440,26 @@ Transaction cancellation     : PASS
 Commit cancellation rollback : PASS
 Shutdown lifecycle           : PASS
 
+Sprint 8.10 TTS playback async and cancellation boundary hardening:
+
+- moved blocking AudioPlayer playback off the asyncio event loop
+- added explicit playback worker ownership in TTSService
+- added cancellation cleanup that stops active playback
+- waits for playback worker termination before propagating cancellation
+- preserves CancelledError semantics
+- avoids stopping playback when cancellation occurs during TTS
+  generation before playback begins
+- preserved existing voice and wake runtime behavior
+
+Sprint 8.10 validation:
+
+Ruff                         : PASS
+Full regression              : 986 passed
+Async playback boundary      : PASS
+Playback cancellation        : PASS
+Playback worker cleanup      : PASS
+Generation cancellation      : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -468,6 +488,9 @@ been completed and validated.
 
 Sprint 8.8 continuous voice cancellation semantics hardening has also
 been completed and validated.
+
+Sprint 8.10 TTS playback async and cancellation boundary hardening has
+also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
