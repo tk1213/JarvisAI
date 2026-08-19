@@ -112,3 +112,56 @@ def test_empty_task_name_is_rejected() -> None:
             )
     finally:
         coroutine.close()
+
+@pytest.mark.asyncio
+async def test_stop_all_waits_for_task_cancellation_cleanup() -> None:
+    manager = TaskManager()
+
+    started = asyncio.Event()
+    cleanup_complete = asyncio.Event()
+
+    async def worker() -> None:
+        started.set()
+
+        try:
+            await asyncio.Future()
+        finally:
+            await asyncio.sleep(0)
+            cleanup_complete.set()
+
+    manager.create_task(
+        "worker",
+        worker(),
+    )
+
+    await started.wait()
+
+    await manager.stop_all()
+
+    assert cleanup_complete.is_set()
+    assert manager.list_tasks() == []
+    assert len(manager) == 0
+
+
+@pytest.mark.asyncio
+async def test_stop_all_is_safe_when_called_twice() -> None:
+    manager = TaskManager()
+
+    started = asyncio.Event()
+
+    async def worker() -> None:
+        started.set()
+        await asyncio.Future()
+
+    manager.create_task(
+        "worker",
+        worker(),
+    )
+
+    await started.wait()
+
+    await manager.stop_all()
+    await manager.stop_all()
+
+    assert manager.list_tasks() == []
+    assert len(manager) == 0
