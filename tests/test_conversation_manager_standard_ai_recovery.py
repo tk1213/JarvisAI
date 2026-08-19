@@ -34,6 +34,7 @@ class ToolRecoveryService(ConversationRecoveryService):
 async def test_manager_standard_ai_recovery_failure_degrades_safely() -> None:
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )

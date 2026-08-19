@@ -21,6 +21,29 @@ class MemoryService:
         async with self.database.session() as session:
             session.add(message)
 
+    async def save_turn(
+        self,
+        user_content: str,
+        assistant_content: str,
+    ) -> None:
+        user_message = ChatMessage(
+            role="user",
+            content=user_content,
+        )
+
+        assistant_message = ChatMessage(
+            role="assistant",
+            content=assistant_content,
+        )
+
+        async with self.database.session() as session:
+            session.add(
+                user_message
+            )
+            session.add(
+                assistant_message
+            )
+
     async def get_recent_messages(
         self,
         limit: int = 20,

@@ -11,6 +11,7 @@ from jarvis.services.conversation_manager import ConversationManager
 def build_manager() -> ConversationManager:
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )

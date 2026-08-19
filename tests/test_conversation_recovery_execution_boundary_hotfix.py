@@ -13,6 +13,7 @@ from jarvis.services.conversation_manager import ConversationManager
 async def test_timeout_trace_survives_safe_recovery_execution() -> None:
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )

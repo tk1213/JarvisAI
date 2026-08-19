@@ -11,6 +11,7 @@ from jarvis.services.conversation_manager import ConversationManager
 async def test_manager_exposes_unified_health_report() -> None:
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(return_value=[])
 
     manager = ConversationManager(

@@ -183,6 +183,7 @@ async def test_voice_dialogue_confirms_smart_home_side_effect() -> None:
 
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )
@@ -266,6 +267,7 @@ async def test_voice_dialogue_cancels_smart_home_side_effect() -> None:
 
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(return_value=[])
 
     router = Mock()
@@ -332,6 +334,7 @@ async def test_voice_dialogue_allows_status_while_confirmation_is_pending() -> N
 
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(return_value=[])
 
     router = Mock()

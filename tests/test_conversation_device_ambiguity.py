@@ -26,6 +26,7 @@ def conversation() -> tuple[
     )
 
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
 
     memory.get_ai_history = AsyncMock(
         return_value=[],
@@ -191,4 +192,9 @@ async def test_ambiguous_reply_is_saved_to_memory(
         in reply
     )
 
-    assert memory.save_message.await_count == 2
+    memory.save_turn.assert_awaited_once()
+
+    call = memory.save_turn.await_args
+
+    assert call.kwargs["assistant_content"] == reply
+    assert call.kwargs["user_content"]

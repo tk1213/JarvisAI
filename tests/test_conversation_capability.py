@@ -25,6 +25,7 @@ def conversation_manager() -> ConversationManager:
 
     memory = Mock(spec=MemoryService)
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[],
     )

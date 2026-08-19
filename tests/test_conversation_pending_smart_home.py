@@ -46,6 +46,7 @@ def conversation(
 
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )
@@ -266,6 +267,7 @@ async def test_thai_spoken_number_selects_smart_plug_2() -> None:
 
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )

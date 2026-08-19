@@ -483,14 +483,10 @@ class ConversationManager:
         reply: str,
         tool: str,
     ) -> None:
-        await self._memory.save_message(
-            role="user",
-            content=user_text,
-        )
-
-        await self._memory.save_message(
-            role="assistant",
-            content=reply,
+        
+        await self._memory.save_turn(
+            user_content=user_text,
+            assistant_content=reply,
         )
 
         await event_bus.publish(

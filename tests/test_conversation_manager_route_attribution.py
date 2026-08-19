@@ -12,6 +12,7 @@ from jarvis.services.tool_router import ToolRouter
 def build_manager() -> ConversationManager:
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )
@@ -50,6 +51,7 @@ async def test_actual_source_overrides_initial_prediction() -> None:
 async def test_music_request_uses_ai_route_not_legacy_plugin() -> None:
     memory = Mock()
     memory.save_message = AsyncMock()
+    memory.save_turn = AsyncMock()
     memory.get_ai_history = AsyncMock(
         return_value=[]
     )
