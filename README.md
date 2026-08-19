@@ -22,6 +22,7 @@ Sprint 8.6: Wake Cancellation Boundary Reliability Hardening - COMPLETE
 Sprint 8.7: Voice Capture Cancellation Boundary Hardening - COMPLETE
 Sprint 8.9: Database Transaction Cancellation & Lifecycle Reliability Hardening - COMPLETE
 Sprint 8.10: TTS Playback Async & Cancellation Boundary Hardening - COMPLETE
+Sprint 8.11: Conversation Memory Atomic Turn Persistence Hardening - COMPLETE
 ```
 
 
@@ -30,16 +31,16 @@ Current release checkpoint:
 ```text
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-Commit  : a9d208d
+Commit  : 6825df0
 ```
 
 Current post-release development baseline:
 
 ```text
-Commit          : a9d208d
+Commit          : 19fdb71
 Branch          : main
 Remote          : origin/main
-Full regression : 986 passed
+Full regression : 988 passed
 Ruff            : PASS
 ```
 
@@ -1259,6 +1260,9 @@ hardening has also been completed and validated.
 Sprint 8.10 TTS playback async and cancellation boundary hardening has
 also been completed and validated.
 
+Sprint 8.11 conversation memory atomic turn persistence hardening has
+also been completed and validated.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
@@ -1435,6 +1439,29 @@ Sprint 8.10 validation confirms that:
 - existing wake, voice-turn, dialogue, and assistant runtime behavior
   remains compatible
 - the complete automated regression suite remains green at 986 tests
+
+Sprint 8.11 hardens conversation memory persistence so a completed
+user/assistant turn is stored atomically.
+
+ConversationManager no longer persists the user and assistant messages
+through two independent save_message() transactions. It now delegates
+the completed turn to MemoryService.save_turn(), which adds both
+messages within one DatabaseManager session.
+
+This removes the partial-turn persistence boundary where the user
+message could commit successfully before cancellation or failure
+prevented the assistant message from being stored.
+
+Sprint 8.11 validation confirms that:
+
+- user and assistant messages are added within one database session
+- ConversationManager uses one atomic save_turn() operation per
+  completed conversation turn
+- the previous two-transaction save_message() persistence path is no
+  longer used for completed turns
+- existing conversation, Smart Home, recovery, diagnostics, and voice
+  dialogue behavior remains compatible
+- the complete automated regression suite remains green at 988 tests
 
 ---
 

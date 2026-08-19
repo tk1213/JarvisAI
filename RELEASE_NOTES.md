@@ -195,7 +195,7 @@ Release Checkpoint
 
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-Commit  : a9d208d
+Commit  : 6825df0
 
 Python packaging may display:
 
@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : d99be25
+Commit          : 19fdb71
 Branch          : main
-Full regression : 981 passed
+Full regression : 988 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -460,6 +460,26 @@ Playback cancellation        : PASS
 Playback worker cleanup      : PASS
 Generation cancellation      : PASS
 
+Sprint 8.11 conversation memory atomic turn persistence hardening:
+
+- added MemoryService.save_turn() for atomic conversation-turn
+  persistence
+- stores user and assistant messages within one database session
+- changed ConversationManager from two independent save_message()
+  operations to one save_turn() operation
+- removed the partial-turn persistence boundary between user and
+  assistant message commits
+- migrated conversation test fixtures to the atomic save_turn contract
+- preserved existing conversation and voice runtime behavior
+
+Sprint 8.11 validation:
+
+Ruff                         : PASS
+Full regression              : 988 passed
+Atomic turn persistence      : PASS
+Single-session turn storage  : PASS
+Conversation compatibility   : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -490,6 +510,9 @@ Sprint 8.8 continuous voice cancellation semantics hardening has also
 been completed and validated.
 
 Sprint 8.10 TTS playback async and cancellation boundary hardening has
+also been completed and validated.
+
+Sprint 8.11 conversation memory atomic turn persistence hardening has
 also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.

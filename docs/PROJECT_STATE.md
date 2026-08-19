@@ -13,7 +13,7 @@ Release checkpoint:
 
 Version : 0.7.0-alpha.1
 Git tag : v0.7.0-alpha.1
-Commit  : a9d208d
+Commit  : 6825df0
 
 Sprint 7 builds on the validated Sprint 6 voice-runtime baseline.
 
@@ -1129,6 +1129,33 @@ Implementation commit:
 
 a9d208d
 
+Sprint 8.11 conversation memory atomic turn persistence hardening
+completed:
+
+- added MemoryService.save_turn()
+- user and assistant messages are persisted within one database session
+- ConversationManager now persists completed turns through one atomic
+  save_turn() operation
+- removed the two-transaction save_message() boundary for completed
+  conversation turns
+- partial-turn persistence risk between user and assistant commits has
+  been removed
+- conversation test fixtures were migrated to the atomic persistence
+  contract
+- existing conversation and voice behavior remains compatible
+
+Sprint 8.11 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 988 passed
+Atomic turn persistence      : PASS
+Single-session turn storage  : PASS
+Conversation compatibility   : PASS
+
+Implementation commit:
+
+19fdb71
+
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
 post-release reliability, architecture hardening, Sprint 8.1 runtime
@@ -1276,6 +1303,9 @@ been completed and validated.
 
 Sprint 8.8 continuous voice cancellation semantics hardening has also
 been completed and validated.
+
+Sprint 8.11 conversation memory atomic turn persistence hardening has
+also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
