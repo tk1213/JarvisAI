@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : 459d15f
+Commit          : 3709072
 Branch          : main
-Full regression : 991 passed
+Full regression : 995 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -501,6 +501,26 @@ Primary persistence          : PASS
 Retention failure isolation  : PASS
 Retention diagnostics        : PASS
 Cancellation propagation     : PASS
+
+Sprint 8.13 planner execution persistence concurrent startup and
+cancellation hardening:
+
+- serialized ExecutionPersistenceService repository startup
+- prevented duplicate repository initialization under concurrent callers
+- preserved sequential startup idempotency
+- preserved retryability after startup failure
+- preserved retryability after startup cancellation
+- isolated cancellation of waiting startup callers from active startup
+- preserved lazy initialization for execution persistence read/write paths
+
+Sprint 8.13 validation:
+
+Ruff                         : PASS
+Full regression              : 995 passed
+Concurrent startup           : PASS
+Failure retryability         : PASS
+Cancellation retryability    : PASS
+Waiting caller isolation     : PASS
 
 Next Milestone
 

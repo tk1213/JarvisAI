@@ -24,6 +24,7 @@ Sprint 8.9: Database Transaction Cancellation & Lifecycle Reliability Hardening 
 Sprint 8.10: TTS Playback Async & Cancellation Boundary Hardening - COMPLETE
 Sprint 8.11: Conversation Memory Atomic Turn Persistence Hardening - COMPLETE
 Sprint 8.12: AI Agent Memory Retention Failure & Cancellation Semantics Hardening - COMPLETE
+Sprint 8.13: Planner Execution Persistence Concurrent Startup & Cancellation Hardening - COMPLETE
 ```
 
 
@@ -38,10 +39,10 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : 459d15f
+Commit          : 3709072
 Branch          : main
 Remote          : origin/main
-Full regression : 991 passed
+Full regression : 995 passed
 Ruff            : PASS
 ```
 
@@ -1121,8 +1122,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : 459d15f
-Full regression                     : 991 passed
+Commit                              : 3709072
+Full regression                     : 995 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1266,6 +1267,9 @@ also been completed and validated.
 
 Sprint 8.12 AI agent memory retention failure and cancellation semantics
 hardening has also been completed and validated.
+
+Sprint 8.13 planner execution persistence concurrent startup and
+cancellation hardening has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
@@ -1491,6 +1495,28 @@ Sprint 8.12 validation confirms that:
 - primary persistence failures continue to propagate normally
 - in-memory lifecycle behavior remains compatible
 - the complete automated regression suite remains green at 991 tests
+
+Sprint 8.13 hardens planner execution persistence startup concurrency
+and cancellation semantics.
+
+ExecutionPersistenceService startup is now serialized so concurrent
+lazy-start callers cannot initialize the underlying repository more than
+once.
+
+The startup boundary remains retryable after ordinary startup failure
+or cancellation. A caller cancelled while waiting for startup ownership
+does not cancel or corrupt the active repository startup performed by
+another caller.
+
+Sprint 8.13 validation confirms that:
+
+- sequential startup remains idempotent
+- concurrent startup initializes the repository exactly once
+- startup failure leaves the service not started and retryable
+- startup cancellation leaves the service not started and retryable
+- cancelling a waiting startup caller does not cancel active startup
+- read paths continue to lazily initialize persistence
+- the complete automated regression suite remains green at 995 tests
 
 ---
 

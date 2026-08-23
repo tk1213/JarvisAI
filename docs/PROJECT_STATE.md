@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : 459d15f
+Commit          : 3709072
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 991 passed
+Full regression : 995 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1182,6 +1182,31 @@ Cancellation propagation     : PASS
 Implementation commit:
 
 459d15f
+
+Sprint 8.13 planner execution persistence concurrent startup and
+cancellation hardening completed:
+
+- ExecutionPersistenceService startup is now serialized
+- concurrent callers initialize the execution repository exactly once
+- ordinary startup failure leaves the service retryable
+- startup cancellation leaves the service retryable
+- cancellation of a caller waiting for startup ownership does not
+  cancel the active startup
+- lazy persistence initialization remains compatible with existing
+  execution read and write paths
+
+Sprint 8.13 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 995 passed
+Concurrent startup           : PASS
+Failure retryability         : PASS
+Cancellation retryability    : PASS
+Waiting caller isolation     : PASS
+
+Implementation commit:
+
+3709072
 
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
