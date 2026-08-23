@@ -522,6 +522,28 @@ Failure retryability         : PASS
 Cancellation retryability    : PASS
 Waiting caller isolation     : PASS
 
+Sprint 8.14 planner execution persistence failure isolation and
+cancellation semantics hardening:
+
+- separated completed plan execution outcome from post-execution
+  persistence failure
+- ordinary persistence failures no longer replace completed execution
+  results with persistence exceptions
+- added last_persistence_error diagnostics
+- preserved successful and failed PlanExecutionResult semantics
+- preserved CancelledError propagation during persistence cancellation
+- prevented persistence maintenance failure from misrepresenting the
+  actual execution outcome
+
+Sprint 8.14 validation:
+
+Ruff                         : PASS
+Full regression              : 998 passed
+Execution outcome isolation  : PASS
+Persistence diagnostics      : PASS
+Failed execution preservation: PASS
+Cancellation propagation     : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -556,6 +578,9 @@ also been completed and validated.
 
 Sprint 8.11 conversation memory atomic turn persistence hardening has
 also been completed and validated.
+
+Sprint 8.14 planner execution persistence failure isolation and
+cancellation semantics hardening has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 

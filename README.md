@@ -39,10 +39,10 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : 3709072
+Commit          : aa7e4ba
 Branch          : main
 Remote          : origin/main
-Full regression : 995 passed
+Full regression : 998 passed
 Ruff            : PASS
 ```
 
@@ -1122,8 +1122,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : 3709072
-Full regression                     : 995 passed
+Commit                              : aa7e4ba
+Full regression                     : 998 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1270,6 +1270,9 @@ hardening has also been completed and validated.
 
 Sprint 8.13 planner execution persistence concurrent startup and
 cancellation hardening has also been completed and validated.
+
+Sprint 8.14 planner execution persistence failure isolation and
+cancellation semantics hardening has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
@@ -1517,6 +1520,32 @@ Sprint 8.13 validation confirms that:
 - cancelling a waiting startup caller does not cancel active startup
 - read paths continue to lazily initialize persistence
 - the complete automated regression suite remains green at 995 tests
+
+Sprint 8.14 hardens planner execution persistence failure isolation and
+cancellation semantics.
+
+PersistingPlanExecutor now distinguishes the outcome of plan execution
+from post-execution persistence maintenance. Once plan execution has
+completed, an ordinary persistence failure no longer replaces the
+completed PlanExecutionResult with a persistence exception.
+
+Ordinary persistence failures are retained through
+last_persistence_error so the durability problem remains observable
+without misrepresenting the execution outcome.
+
+External cancellation remains distinct from ordinary persistence
+failure. CancelledError continues to propagate to callers and is not
+converted into an ordinary persistence diagnostic.
+
+Sprint 8.14 validation confirms that:
+
+- completed execution remains successful when persistence later fails
+- failed execution remains failed when persistence later fails
+- ordinary persistence failure is exposed through last_persistence_error
+- successful persistence leaves last_persistence_error clear
+- persistence cancellation continues to propagate CancelledError
+- persistence failure does not overwrite the actual execution outcome
+- the complete automated regression suite remains green at 998 tests
 
 ---
 

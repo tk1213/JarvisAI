@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : 3709072
+Commit          : aa7e4ba
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 995 passed
+Full regression : 998 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1208,6 +1208,33 @@ Implementation commit:
 
 3709072
 
+Sprint 8.14 planner execution persistence failure isolation and
+cancellation semantics hardening completed:
+
+- completed plan execution outcome is now isolated from ordinary
+  post-execution persistence failure
+- ordinary persistence failure no longer replaces the completed
+  PlanExecutionResult
+- last_persistence_error exposes persistence durability failure
+- failed execution results remain failed even when persistence also fails
+- successful persistence leaves persistence diagnostics clear
+- CancelledError continues to propagate during persistence cancellation
+- execution outcome semantics remain distinct from persistence
+  maintenance semantics
+
+Sprint 8.14 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 998 passed
+Execution outcome isolation  : PASS
+Persistence diagnostics      : PASS
+Failed execution preservation: PASS
+Cancellation propagation     : PASS
+
+Implementation commit:
+
+aa7e4ba
+
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
 post-release reliability, architecture hardening, Sprint 8.1 runtime
@@ -1358,6 +1385,9 @@ been completed and validated.
 
 Sprint 8.11 conversation memory atomic turn persistence hardening has
 also been completed and validated.
+
+Sprint 8.14 planner execution persistence failure isolation and
+cancellation semantics hardening has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
