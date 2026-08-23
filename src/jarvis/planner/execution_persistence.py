@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from jarvis.planner.execution_record import (
     PlanExecutionRecord,
     PlanExecutionRecordBuilder,
@@ -24,6 +26,7 @@ class ExecutionPersistenceService:
             else PlanExecutionRecordBuilder()
         )
         self._started = False
+        self._startup_lock = asyncio.Lock()
 
     @property
     def started(self) -> bool:
@@ -33,8 +36,12 @@ class ExecutionPersistenceService:
         if self._started:
             return
 
-        await self._repository.startup()
-        self._started = True
+        async with self._startup_lock:
+            if self._started:
+                return
+
+            await self._repository.startup()
+            self._started = True
 
     async def persist_execution(
         self,
