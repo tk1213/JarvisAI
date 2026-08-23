@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : d99be25
+Commit          : 459d15f
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 981 passed
+Full regression : 991 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1155,6 +1155,33 @@ Conversation compatibility   : PASS
 Implementation commit:
 
 19fdb71
+
+Sprint 8.12 AI agent memory retention failure and cancellation semantics
+hardening completed:
+
+- durable agent memory persistence is now clearly separated from
+  post-write retention maintenance
+- ordinary retention failure no longer invalidates a completed durable
+  write
+- last_retention_error records ordinary retention maintenance failure
+- last_retention_result continues to represent successful retention
+  enforcement
+- CancelledError remains observable during retention cancellation
+- primary persistence failure semantics remain unchanged
+- agent memory lifecycle compatibility remains intact
+
+Sprint 8.12 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 991 passed
+Primary persistence          : PASS
+Retention failure isolation  : PASS
+Retention diagnostics        : PASS
+Cancellation propagation     : PASS
+
+Implementation commit:
+
+459d15f
 
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional

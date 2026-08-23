@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : 19fdb71
+Commit          : 459d15f
 Branch          : main
-Full regression : 988 passed
+Full regression : 991 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -479,6 +479,28 @@ Full regression              : 988 passed
 Atomic turn persistence      : PASS
 Single-session turn storage  : PASS
 Conversation compatibility   : PASS
+
+Sprint 8.12 AI agent memory retention failure and cancellation semantics
+hardening:
+
+- separated primary durable persistence from post-write retention
+  maintenance semantics
+- ordinary retention failures no longer make successful durable writes
+  appear to have failed
+- added last_retention_error diagnostics
+- retained last_retention_result for successful retention enforcement
+- preserved CancelledError propagation during retention cancellation
+- preserved ordinary primary persistence failure propagation
+- strengthened lifecycle characterization around partial-success state
+
+Sprint 8.12 validation:
+
+Ruff                         : PASS
+Full regression              : 991 passed
+Primary persistence          : PASS
+Retention failure isolation  : PASS
+Retention diagnostics        : PASS
+Cancellation propagation     : PASS
 
 Next Milestone
 
