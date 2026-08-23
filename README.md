@@ -26,6 +26,7 @@ Sprint 8.11: Conversation Memory Atomic Turn Persistence Hardening - COMPLETE
 Sprint 8.12: AI Agent Memory Retention Failure & Cancellation Semantics Hardening - COMPLETE
 Sprint 8.13: Planner Execution Persistence Concurrent Startup & Cancellation Hardening - COMPLETE
 Sprint 8.15: AI Agent Memory Startup Concurrent Restore & Cancellation Hardening - COMPLETE
+Sprint 8.16: AI Agent Memory Startup Retention Failure Isolation & Cancellation Semantics Hardening - COMPLETE
 ```
 
 
@@ -40,10 +41,10 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : 2a828b0
+Commit          : bfcda9a
 Branch          : main
 Remote          : origin/main
-Full regression : 1001 passed
+Full regression : 1003 passed
 Ruff            : PASS
 ```
 
@@ -1123,8 +1124,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : 2a828b0
-Full regression                     : 1001 passed
+Commit                              : bfcda9a
+Full regression                     : 1003 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1277,6 +1278,9 @@ cancellation semantics hardening has also been completed and validated.
 
 Sprint 8.15 AI agent memory startup concurrent restore and cancellation
 hardening has also been completed and validated.
+
+Sprint 8.16 AI agent memory startup retention failure isolation and
+cancellation semantics hardening has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
@@ -1573,6 +1577,31 @@ Sprint 8.15 validation confirms that:
 - restored record count remains consistent
 - existing startup ordering behavior remains compatible
 - the complete automated regression suite remains green at 1001 tests
+
+Sprint 8.16 hardens AI agent memory startup retention failure isolation
+and cancellation semantics.
+
+AIAgentMemoryStartupService now treats retention enforcement as
+maintenance around durable-memory restoration rather than as a fatal
+startup prerequisite.
+
+Ordinary retention failures no longer block durable-memory restore.
+The failure remains observable through retention_error while restoration
+continues normally.
+
+External cancellation remains distinct from ordinary retention failure.
+CancelledError continues to propagate and does not trigger durable-memory
+restore after retention cancellation.
+
+Sprint 8.16 validation confirms that:
+
+- ordinary retention failure does not block durable-memory restoration
+- retention failures are exposed through retention_error
+- successful retention continues to populate retention_result
+- retention cancellation continues to propagate CancelledError
+- retention cancellation does not start durable-memory restoration
+- restore concurrency and retryability semantics from Sprint 8.15 remain intact
+- the complete automated regression suite remains green at 1003 tests
 
 ---
 

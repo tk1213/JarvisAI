@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : 2a828b0
+Commit          : bfcda9a
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 1001 passed
+Full regression : 1003 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1414,6 +1414,30 @@ also been completed and validated.
 
 Sprint 8.14 planner execution persistence failure isolation and
 cancellation semantics hardening has also been completed and validated.
+
+Sprint 8.16 AI agent memory startup retention failure isolation and
+cancellation semantics hardening completed:
+
+- ordinary retention maintenance failure no longer blocks durable-memory
+  restoration during startup
+- retention_error exposes ordinary retention failure diagnostics
+- retention_result continues to represent successful retention enforcement
+- CancelledError remains observable during retention cancellation
+- durable-memory restore is not started after retention cancellation
+- Sprint 8.15 concurrent restore serialization and retryability remain intact
+
+Sprint 8.16 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1003 passed
+Retention failure isolation  : PASS
+Retention diagnostics        : PASS
+Cancellation propagation     : PASS
+Restore continuation         : PASS
+
+Implementation commit:
+
+bfcda9a
 
 The next Sprint 8 scope has not yet been fixed.
 

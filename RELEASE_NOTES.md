@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : 2a828b0
+Commit          : bfcda9a
 Branch          : main
-Full regression : 1001 passed
+Full regression : 1003 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -563,6 +563,26 @@ Concurrent restore           : PASS
 Active cancellation recovery : PASS
 Waiting caller isolation     : PASS
 Restore state consistency    : PASS
+
+Sprint 8.16 AI agent memory startup retention failure isolation and
+cancellation semantics hardening:
+
+- isolated ordinary startup retention failures from durable-memory restore
+- ordinary retention failure no longer aborts successful memory restoration
+- added retention_error diagnostics
+- preserved retention_result for successful retention enforcement
+- preserved CancelledError propagation during retention cancellation
+- prevented durable-memory restore from starting after retention cancellation
+- preserved concurrent restore and retryability semantics
+
+Sprint 8.16 validation:
+
+Ruff                         : PASS
+Full regression              : 1003 passed
+Retention failure isolation  : PASS
+Retention diagnostics        : PASS
+Cancellation propagation     : PASS
+Restore continuation         : PASS
 
 Next Milestone
 
