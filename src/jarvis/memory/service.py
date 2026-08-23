@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from jarvis.core.logger import log
 from jarvis.memory.audit import MemoryAuditAction
 from jarvis.memory.audit_service import MemoryAuditService
 from jarvis.memory.conflict import MemoryConflictPolicy
@@ -22,6 +23,13 @@ class MemoryService:
     ) -> None:
         self._repository = repository
         self._audit = audit
+        self._last_audit_error: str | None = None
+
+    @property
+    def last_audit_error(
+        self,
+    ) -> str | None:
+        return self._last_audit_error
 
     async def remember(
         self,
@@ -275,13 +283,26 @@ class MemoryService:
         source: str,
         reason: str,
     ) -> None:
+        self._last_audit_error = None
+
         if self._audit is None:
             return
 
-        await self._audit.record(
-            action=action,
-            key=key,
-            value=value,
-            source=source,
-            reason=reason,
-        )
+        try:
+            await self._audit.record(
+                action=action,
+                key=key,
+                value=value,
+                source=source,
+                reason=reason,
+            )
+
+        except Exception as exc:  # noqa: BLE001
+            self._last_audit_error = str(
+                exc
+            )
+
+            log.exception(
+                "Memory audit failed after primary memory operation "
+                "completed; preserving the completed memory outcome."
+            )
