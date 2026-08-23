@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from jarvis.core.logger import log
 from jarvis.planner.execution_persistence import (
     ExecutionPersistenceService,
 )
@@ -21,7 +22,15 @@ class PersistingPlanExecutor(PlanExecutor):
         super().__init__(
             router
         )
+
         self._persistence = persistence
+        self._last_persistence_error: str | None = None
+
+    @property
+    def last_persistence_error(
+        self,
+    ) -> str | None:
+        return self._last_persistence_error
 
     async def execute(
         self,
@@ -31,8 +40,21 @@ class PersistingPlanExecutor(PlanExecutor):
             plan
         )
 
-        await self._persistence.persist_execution(
-            result
-        )
+        self._last_persistence_error = None
+
+        try:
+            await self._persistence.persist_execution(
+                result
+            )
+
+        except Exception as exc:  # noqa: BLE001
+            self._last_persistence_error = str(
+                exc
+            )
+
+            log.exception(
+                "Plan execution persistence failed after execution "
+                "completed; returning the completed execution result."
+            )
 
         return result
