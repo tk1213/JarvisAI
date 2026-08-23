@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from jarvis.agent.memory import AIAgentMemoryLifecycle
 from jarvis.agent.memory_retention import (
     AIAgentMemoryRetentionPolicy,
@@ -21,6 +23,7 @@ class AIAgentMemoryStartupService:
         self._retention_result: AIAgentMemoryRetentionResult | None = None
         self._restored = False
         self._restored_records = 0
+        self._restore_lock = asyncio.Lock()
 
     @property
     def retention_result(self) -> AIAgentMemoryRetentionResult | None:
@@ -40,12 +43,20 @@ class AIAgentMemoryStartupService:
         if self._restored:
             return self._restored_records
 
-        if self._retention is not None:
-            self._retention_result = await self._retention.enforce()
+        async with self._restore_lock:
+            if self._restored:
+                return self._restored_records
 
-        restored = await self._lifecycle.restore_durable_memory()
+            if self._retention is not None:
+                self._retention_result = (
+                    await self._retention.enforce()
+                )
 
-        self._restored = True
-        self._restored_records = restored
+            restored = (
+                await self._lifecycle.restore_durable_memory()
+            )
 
-        return restored
+            self._restored = True
+            self._restored_records = restored
+
+            return restored
