@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from sqlalchemy.ext.asyncio import (
@@ -65,6 +67,7 @@ async def make_database(
         f"sqlite+aiosqlite:///{path.as_posix()}",
         echo=False,
     )
+
     database.session_factory = async_sessionmaker(
         bind=database.engine,
         expire_on_commit=False,
@@ -100,10 +103,12 @@ async def test_repository_saves_and_loads_record(
         assert loaded is not None
         assert loaded.goal == "Ping Jarvis"
         assert loaded.success is True
+
         assert (
             loaded.steps[0].capability
             == "system.ping"
         )
+
         assert (
             loaded.events[0].event_type
             == "plan_started"
@@ -133,6 +138,7 @@ async def test_repository_lists_recent_records(
                 goal="First"
             )
         )
+
         await repository.save(
             make_record(
                 goal="Second"
@@ -153,3 +159,62 @@ async def test_repository_lists_recent_records(
 
     finally:
         await database.engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_repository_save_propagates_cancellation_from_transaction() -> None:
+    entered = asyncio.Event()
+
+    connection = Mock()
+
+    async def execute(
+        *args,
+        **kwargs,
+    ):
+        del args
+        del kwargs
+
+        entered.set()
+
+        await asyncio.Future()
+
+    connection.execute = AsyncMock(
+        side_effect=execute,
+    )
+
+    context = AsyncMock()
+    context.__aenter__.return_value = connection
+    context.__aexit__.return_value = None
+
+    engine = Mock()
+    engine.begin.return_value = context
+
+    database = Mock()
+    database.engine = engine
+
+    repository = PlanExecutionRepository(
+        database,  # type: ignore[arg-type]
+    )
+
+    task = asyncio.create_task(
+        repository.save(
+            make_record(
+                goal="Cancelled"
+            )
+        )
+    )
+
+    await entered.wait()
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await task
+
+    context.__aexit__.assert_awaited_once()
+
+    exc_type = context.__aexit__.await_args.args[0]
+
+    assert exc_type is asyncio.CancelledError
