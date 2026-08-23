@@ -313,3 +313,60 @@ async def test_retention_cancellation_propagates_and_does_not_restore() -> None:
     assert service.restored_records == 0
     assert service.retention_result is None
     assert service.retention_error is None
+
+@pytest.mark.asyncio
+async def test_restore_failure_after_retention_success_remains_retryable() -> None:
+    class Retention:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def enforce(
+            self,
+        ):
+            self.calls += 1
+
+            return object()
+
+    class FailingOnceLifecycle:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def restore_durable_memory(
+            self,
+        ) -> int:
+            self.calls += 1
+
+            if self.calls == 1:
+                raise RuntimeError(
+                    "restore failed"
+                )
+
+            return 3
+
+    lifecycle = FailingOnceLifecycle()
+    retention = Retention()
+
+    service = AIAgentMemoryStartupService(
+        lifecycle,  # type: ignore[arg-type]
+        retention=retention,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="restore failed",
+    ):
+        await service.restore()
+
+    assert service.restored is False
+    assert service.restored_records == 0
+    assert service.retention_result is not None
+    assert service.retention_error is None
+
+    restored = await service.restore()
+
+    assert restored == 3
+    assert service.restored is True
+    assert service.restored_records == 3
+
+    assert lifecycle.calls == 2
+    assert retention.calls == 2
