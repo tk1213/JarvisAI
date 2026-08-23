@@ -234,9 +234,9 @@ completed on main after the v0.7.0-alpha.1 release checkpoint.
 Current post-release development baseline:
 
 
-Commit          : 3709072
+Commit          : 2a828b0
 Branch          : main
-Full regression : 995 passed
+Full regression : 1001 passed
 Ruff            : PASS
 
 Completed post-release hardening:
@@ -544,6 +544,26 @@ Persistence diagnostics      : PASS
 Failed execution preservation: PASS
 Cancellation propagation     : PASS
 
+Sprint 8.15 AI agent memory startup concurrent restore and cancellation
+hardening:
+
+- serialized AIAgentMemoryStartupService durable-memory restore
+- prevented duplicate retention and restore work under concurrent callers
+- preserved sequential restore idempotency
+- preserved retryability after active restore cancellation
+- isolated cancellation of waiting restore callers from active restore
+- committed restored state only after successful restoration
+- preserved database-ready startup ordering behavior
+
+Sprint 8.15 validation:
+
+Ruff                         : PASS
+Full regression              : 1001 passed
+Concurrent restore           : PASS
+Active cancellation recovery : PASS
+Waiting caller isolation     : PASS
+Restore state consistency    : PASS
+
 Next Milestone
 
 Sprint 8 began from the validated v0.7.0-alpha.1 baseline.
@@ -581,6 +601,9 @@ also been completed and validated.
 
 Sprint 8.14 planner execution persistence failure isolation and
 cancellation semantics hardening has also been completed and validated.
+
+Sprint 8.15 AI agent memory startup concurrent restore and cancellation
+hardening has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 

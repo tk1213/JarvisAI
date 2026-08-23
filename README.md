@@ -25,6 +25,7 @@ Sprint 8.10: TTS Playback Async & Cancellation Boundary Hardening - COMPLETE
 Sprint 8.11: Conversation Memory Atomic Turn Persistence Hardening - COMPLETE
 Sprint 8.12: AI Agent Memory Retention Failure & Cancellation Semantics Hardening - COMPLETE
 Sprint 8.13: Planner Execution Persistence Concurrent Startup & Cancellation Hardening - COMPLETE
+Sprint 8.15: AI Agent Memory Startup Concurrent Restore & Cancellation Hardening - COMPLETE
 ```
 
 
@@ -39,10 +40,10 @@ Commit  : 6825df0
 Current post-release development baseline:
 
 ```text
-Commit          : aa7e4ba
+Commit          : 2a828b0
 Branch          : main
 Remote          : origin/main
-Full regression : 998 passed
+Full regression : 1001 passed
 Ruff            : PASS
 ```
 
@@ -1122,8 +1123,8 @@ Original-state restore    : PASS
 Current post-release Sprint 8 baseline:
 
 ```text
-Commit                              : aa7e4ba
-Full regression                     : 998 passed
+Commit                              : 2a828b0
+Full regression                     : 1001 passed
 Ruff                                : PASS
 Tuya aggregate status live gate     : PASS
 Tuya device status live gate        : PASS
@@ -1273,6 +1274,9 @@ cancellation hardening has also been completed and validated.
 
 Sprint 8.14 planner execution persistence failure isolation and
 cancellation semantics hardening has also been completed and validated.
+
+Sprint 8.15 AI agent memory startup concurrent restore and cancellation
+hardening has also been completed and validated.
 
 The next Sprint 8 scope has not yet been fixed.
 
@@ -1546,6 +1550,29 @@ Sprint 8.14 validation confirms that:
 - persistence cancellation continues to propagate CancelledError
 - persistence failure does not overwrite the actual execution outcome
 - the complete automated regression suite remains green at 998 tests
+
+Sprint 8.15 hardens AI agent durable-memory startup concurrency and
+cancellation semantics.
+
+AIAgentMemoryStartupService restore is now serialized so concurrent
+callers cannot perform retention and durable-memory restoration more
+than once.
+
+The restore lifecycle remains retryable after ordinary failure or
+cancellation. A caller cancelled while waiting for restore ownership
+does not cancel or corrupt the active restore performed by another
+caller.
+
+Sprint 8.15 validation confirms that:
+
+- sequential restore remains idempotent
+- concurrent restore executes the durable-memory restore exactly once
+- cancellation during active restore leaves the service retryable
+- cancelling a waiting restore caller does not cancel active restore
+- restored state is only committed after successful restoration
+- restored record count remains consistent
+- existing startup ordering behavior remains compatible
+- the complete automated regression suite remains green at 1001 tests
 
 ---
 

@@ -889,11 +889,11 @@ Original-state restore    : PASS
 
 Current post-release hardening baseline:
 
-Commit          : aa7e4ba
+Commit          : 2a828b0
 Branch          : main
 Remote          : origin/main
 Working tree    : clean
-Full regression : 998 passed
+Full regression : 1001 passed
 Ruff            : PASS
 
 Post-release hardening completed after v0.7.0-alpha.1:
@@ -1234,6 +1234,32 @@ Cancellation propagation     : PASS
 Implementation commit:
 
 aa7e4ba
+
+Sprint 8.15 AI agent memory startup concurrent restore and cancellation
+hardening completed:
+
+- durable-memory startup restore is now serialized
+- concurrent callers perform retention and durable-memory restoration
+  exactly once
+- active restore cancellation leaves the service retryable
+- cancellation of a caller waiting for restore ownership does not
+  cancel the active restore
+- restored state and restored record count are committed only after
+  successful restoration
+- existing database-ready startup ordering remains compatible
+
+Sprint 8.15 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1001 passed
+Concurrent restore           : PASS
+Active cancellation recovery : PASS
+Waiting caller isolation     : PASS
+Restore state consistency    : PASS
+
+Implementation commit:
+
+2a828b0
 
 The v0.7.0-alpha.1 release checkpoint remains the validated Sprint 7
 release baseline. The current main branch includes additional
