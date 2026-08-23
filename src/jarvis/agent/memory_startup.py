@@ -7,6 +7,7 @@ from jarvis.agent.memory_retention import (
     AIAgentMemoryRetentionPolicy,
     AIAgentMemoryRetentionResult,
 )
+from jarvis.core.logger import log
 
 
 class AIAgentMemoryStartupService:
@@ -20,14 +21,28 @@ class AIAgentMemoryStartupService:
     ) -> None:
         self._lifecycle = lifecycle
         self._retention = retention
-        self._retention_result: AIAgentMemoryRetentionResult | None = None
+
+        self._retention_result: (
+            AIAgentMemoryRetentionResult | None
+        ) = None
+        self._retention_error: str | None = None
+
         self._restored = False
         self._restored_records = 0
+
         self._restore_lock = asyncio.Lock()
 
     @property
-    def retention_result(self) -> AIAgentMemoryRetentionResult | None:
+    def retention_result(
+        self,
+    ) -> AIAgentMemoryRetentionResult | None:
         return self._retention_result
+
+    @property
+    def retention_error(
+        self,
+    ) -> str | None:
+        return self._retention_error
 
     @property
     def restored(self) -> bool:
@@ -47,10 +62,24 @@ class AIAgentMemoryStartupService:
             if self._restored:
                 return self._restored_records
 
+            self._retention_result = None
+            self._retention_error = None
+
             if self._retention is not None:
-                self._retention_result = (
-                    await self._retention.enforce()
-                )
+                try:
+                    self._retention_result = (
+                        await self._retention.enforce()
+                    )
+
+                except Exception as exc:  # noqa: BLE001
+                    self._retention_error = str(
+                        exc
+                    )
+
+                    log.exception(
+                        "Agent memory retention failed during "
+                        "startup; continuing durable memory restore."
+                    )
 
             restored = (
                 await self._lifecycle.restore_durable_memory()

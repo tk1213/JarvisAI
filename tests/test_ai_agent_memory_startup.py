@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 from jarvis.agent.memory_startup import AIAgentMemoryStartupService
@@ -200,3 +201,115 @@ async def test_cancelling_waiting_restore_does_not_cancel_active_restore() -> No
     assert lifecycle.calls == 1
     assert service.restored is True
     assert service.restored_records == 3
+
+@pytest.mark.asyncio
+async def test_retention_failure_does_not_block_durable_restore() -> None:
+    class FailingRetention:
+        async def enforce(
+            self,
+        ):
+            raise RuntimeError(
+                "retention failed"
+            )
+
+    lifecycle = FakeLifecycle(
+        restored=3
+    )
+
+    service = AIAgentMemoryStartupService(
+        lifecycle,  # type: ignore[arg-type]
+        retention=FailingRetention(),  # type: ignore[arg-type]
+    )
+
+    restored = await service.restore()
+
+    assert restored == 3
+    assert lifecycle.calls == 1
+    assert service.restored is True
+    assert service.restored_records == 3
+    assert service.retention_result is None
+    assert service.retention_error == "retention failed"
+
+@pytest.mark.asyncio
+async def test_retention_cancellation_propagates_and_does_not_restore() -> None:
+    class CancellingRetention:
+        async def enforce(
+            self,
+        ):
+            raise asyncio.CancelledError
+
+    lifecycle = FakeLifecycle(
+        restored=3
+    )
+
+    service = AIAgentMemoryStartupService(
+        lifecycle,  # type: ignore[arg-type]
+        retention=CancellingRetention(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await service.restore()
+
+    assert lifecycle.calls == 0
+    assert service.restored is False
+    assert service.restored_records == 0
+    assert service.retention_result is None
+    assert service.retention_error is None
+
+@pytest.mark.asyncio
+async def test_retention_failure_does_not_block_durable_restore() -> None:
+    class FailingRetention:
+        async def enforce(
+            self,
+        ):
+            raise RuntimeError(
+                "retention failed"
+            )
+
+    lifecycle = FakeLifecycle(
+        restored=3
+    )
+
+    service = AIAgentMemoryStartupService(
+        lifecycle,  # type: ignore[arg-type]
+        retention=FailingRetention(),  # type: ignore[arg-type]
+    )
+
+    restored = await service.restore()
+
+    assert restored == 3
+    assert lifecycle.calls == 1
+    assert service.restored is True
+    assert service.restored_records == 3
+    assert service.retention_result is None
+    assert service.retention_error == "retention failed"
+
+@pytest.mark.asyncio
+async def test_retention_cancellation_propagates_and_does_not_restore() -> None:
+    class CancellingRetention:
+        async def enforce(
+            self,
+        ):
+            raise asyncio.CancelledError
+
+    lifecycle = FakeLifecycle(
+        restored=3
+    )
+
+    service = AIAgentMemoryStartupService(
+        lifecycle,  # type: ignore[arg-type]
+        retention=CancellingRetention(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await service.restore()
+
+    assert lifecycle.calls == 0
+    assert service.restored is False
+    assert service.restored_records == 0
+    assert service.retention_result is None
+    assert service.retention_error is None
