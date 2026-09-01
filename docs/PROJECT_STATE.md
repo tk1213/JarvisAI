@@ -1476,6 +1476,40 @@ Validation and coverage commits:
 2c525ae
 f710570
 
+Sprint 8.18 Tuya post-command uncertainty and single-dispatch
+contract hardening completed:
+
+- Tuya power-command verification behavior is now protected by
+  explicit regression coverage for post-command uncertainty
+- verification failure after a successful command dispatch preserves
+  the original failure and does not resend the side-effect command
+- cancellation during the verification delay remains observable and
+  does not trigger a duplicate command dispatch
+- cancellation during the verification status check remains observable
+  and does not trigger a duplicate command dispatch
+- side-effect commands remain single-dispatch while bounded status
+  verification continues independently
+- existing Tuya command execution behavior required no production-code
+  change because the implementation already satisfied the hardened
+  contract
+- Sprint 8.17 memory mutation audit failure isolation and cancellation
+  semantics remain intact
+
+Sprint 8.18 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1012 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Post-command failure safety  : PASS
+Cancellation propagation     : PASS
+Single-dispatch contract     : PASS
+Production-code changes      : NONE
+
+Validation and coverage commit:
+
+4bd28ea
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
