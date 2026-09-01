@@ -644,3 +644,141 @@ async def test_application_uses_skill_runtime_without_legacy_plugins() -> None:
 
     finally:
         await app.shutdown()
+
+@pytest.mark.asyncio
+async def test_shutdown_finishes_remaining_cleanup_before_propagating_cancellation() -> None:
+    app = JarvisApplication()
+
+    skill_manager = Mock()
+    skill_manager.shutdown = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    smart_home = Mock()
+    smart_home.disconnect = AsyncMock()
+
+    database = Mock()
+    database.shutdown = AsyncMock()
+
+    system = Mock()
+    system.shutdown = Mock()
+
+    app.started = True
+    app._skills_started = True
+    app._smart_home_connected = True
+    app._database_started = True
+    app._system_started = True
+
+    original_resolve = container.resolve
+
+    def resolve(
+        name: str,
+        expected_type=None,
+    ):
+        if name == "skill_manager":
+            return skill_manager
+
+        if name == "smart_home":
+            return smart_home
+
+        if name == "database":
+            return database
+
+        if name == "system":
+            return system
+
+        return original_resolve(
+            name,
+            expected_type,
+        )
+
+    with (
+        patch.object(
+            container,
+            "resolve",
+            side_effect=resolve,
+        ),
+        pytest.raises(
+            asyncio.CancelledError
+        ),
+    ):
+        await app.shutdown()
+
+    skill_manager.shutdown.assert_awaited_once()
+    smart_home.disconnect.assert_awaited_once()
+    database.shutdown.assert_awaited_once()
+    system.shutdown.assert_called_once()
+
+    assert app.started is False
+    assert len(container) == 0
+
+@pytest.mark.asyncio
+async def test_shutdown_preserves_cancellation_when_later_cleanup_fails() -> None:
+    app = JarvisApplication()
+
+    skill_manager = Mock()
+    skill_manager.shutdown = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    smart_home = Mock()
+    smart_home.disconnect = AsyncMock(
+        side_effect=RuntimeError(
+            "smart home shutdown failed"
+        )
+    )
+
+    database = Mock()
+    database.shutdown = AsyncMock()
+
+    system = Mock()
+    system.shutdown = Mock()
+
+    app.started = True
+    app._skills_started = True
+    app._smart_home_connected = True
+    app._database_started = True
+    app._system_started = True
+
+    original_resolve = container.resolve
+
+    def resolve(
+        name: str,
+        expected_type=None,
+    ):
+        if name == "skill_manager":
+            return skill_manager
+
+        if name == "smart_home":
+            return smart_home
+
+        if name == "database":
+            return database
+
+        if name == "system":
+            return system
+
+        return original_resolve(
+            name,
+            expected_type,
+        )
+
+    with (
+        patch.object(
+            container,
+            "resolve",
+            side_effect=resolve,
+        ),
+        pytest.raises(
+            asyncio.CancelledError
+        ),
+    ):
+        await app.shutdown()
+
+    skill_manager.shutdown.assert_awaited_once()
+    smart_home.disconnect.assert_awaited_once()
+    database.shutdown.assert_awaited_once()
+    system.shutdown.assert_called_once()
+
+    assert app.started is False
+    assert len(container) == 0
