@@ -1510,6 +1510,43 @@ Validation and coverage commit:
 
 4bd28ea
 
+Sprint 8.19 application shutdown cancellation semantics
+hardening completed:
+
+- application shutdown now preserves cleanup progress when an async
+  cleanup step is cancelled
+- the first CancelledError is retained while remaining application
+  resources continue through shutdown cleanup
+- Smart Home, database, system, wake-word, and remaining lifecycle
+  resources are not skipped solely because an earlier async cleanup
+  was cancelled
+- cancellation remains observable after cleanup completes and is not
+  converted into an ordinary shutdown failure
+- ordinary cleanup failures occurring after cancellation do not replace
+  the original cancellation signal
+- the main runtime shutdown boundary is now protected by regression
+  coverage confirming shielded cleanup completion under caller
+  cancellation
+- cleanup-originated cancellation at the main shutdown boundary remains
+  observable
+- startup rollback cancellation semantics were intentionally left
+  unchanged
+
+Sprint 8.19 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1016 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Shutdown cleanup completion  : PASS
+Cancellation propagation     : PASS
+Cancellation preservation    : PASS
+Main shutdown shielding      : PASS
+
+Implementation and regression commit:
+
+43a3b27
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
