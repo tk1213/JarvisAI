@@ -1439,6 +1439,43 @@ Implementation commit:
 
 bfcda9a
 
+Sprint 8.17 memory mutation audit failure isolation and cancellation
+semantics hardening completed:
+
+- successful primary memory mutations are no longer converted into
+  failures when audit persistence fails with an ordinary exception
+- create, update, and delete memory mutation paths preserve their
+  successful primary result when audit recording fails
+- last_audit_error exposes the most recent ordinary audit persistence
+  failure for diagnostics
+- successful audit recording clears the previous audit failure state
+- CancelledError remains observable and is not converted into an
+  ordinary audit failure
+- Sprint 8.16 startup retention failure isolation, cancellation
+  semantics, and durable-memory restore behavior remain intact
+- duplicate agent memory startup regression coverage was removed
+  without reducing unique behavioral coverage
+
+Sprint 8.17 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1009 passed
+Memory mutation preservation : PASS
+Audit failure isolation      : PASS
+Audit diagnostics            : PASS
+Cancellation propagation     : PASS
+Startup regression coverage  : PASS
+
+Implementation commit:
+
+1f3364e
+
+Validation and coverage commits:
+
+9e07050
+2c525ae
+f710570
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
