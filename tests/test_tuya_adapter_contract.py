@@ -1808,3 +1808,102 @@ async def test_set_power_propagates_cancellation_during_status_check(
             device_id="device-1",
             power=True,
         )
+
+@pytest.mark.asyncio
+async def test_set_power_sends_command_once_when_verification_fails(
+    adapter: TuyaAdapter,
+) -> None:
+    adapter._access_token = "token"
+    adapter._find_power_code = AsyncMock(
+        return_value="switch"
+    )
+    adapter._request = AsyncMock(
+        return_value={"success": True}
+    )
+    adapter.get_status = AsyncMock(
+        side_effect=RuntimeError(
+            "status unavailable"
+        )
+    )
+
+    with (
+        patch(
+            "jarvis.smart_home.tuya_adapter.asyncio.sleep",
+            new=AsyncMock(),
+        ),
+        pytest.raises(
+            RuntimeError,
+            match="status unavailable",
+        ),
+    ):
+        await adapter._set_power(
+            device_id="device-1",
+            power=True,
+        )
+
+    assert adapter._request.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_set_power_sends_command_once_when_verification_sleep_is_cancelled(
+    adapter: TuyaAdapter,
+) -> None:
+    adapter._access_token = "token"
+    adapter._find_power_code = AsyncMock(
+        return_value="switch"
+    )
+    adapter._request = AsyncMock(
+        return_value={"success": True}
+    )
+    adapter.get_status = AsyncMock()
+
+    with (
+        patch(
+            "jarvis.smart_home.tuya_adapter.asyncio.sleep",
+            new=AsyncMock(
+                side_effect=asyncio.CancelledError()
+            ),
+        ),
+        pytest.raises(
+            asyncio.CancelledError
+        ),
+    ):
+        await adapter._set_power(
+            device_id="device-1",
+            power=True,
+        )
+
+    assert adapter._request.await_count == 1
+    adapter.get_status.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_set_power_sends_command_once_when_status_check_is_cancelled(
+    adapter: TuyaAdapter,
+) -> None:
+    adapter._access_token = "token"
+    adapter._find_power_code = AsyncMock(
+        return_value="switch"
+    )
+    adapter._request = AsyncMock(
+        return_value={"success": True}
+    )
+    adapter.get_status = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    with (
+        patch(
+            "jarvis.smart_home.tuya_adapter.asyncio.sleep",
+            new=AsyncMock(),
+        ),
+        pytest.raises(
+            asyncio.CancelledError
+        ),
+    ):
+        await adapter._set_power(
+            device_id="device-1",
+            power=True,
+        )
+
+    assert adapter._request.await_count == 1
