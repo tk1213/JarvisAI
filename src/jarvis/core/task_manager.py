@@ -85,13 +85,24 @@ class TaskManager:
             if not task.done():
                 task.cancel()
 
-        if tasks:
-            await asyncio.gather(
-                *tasks,
-                return_exceptions=True,
-            )
+        try:
+            if tasks:
+                completion = asyncio.gather(
+                    *tasks,
+                    return_exceptions=True,
+                )
 
-        self._tasks.clear()
+                try:
+                    await asyncio.shield(
+                        completion
+                    )
+
+                except asyncio.CancelledError:
+                    await completion
+                    raise
+
+        finally:
+            self._tasks.clear()
 
     def list_tasks(self) -> list[str]:
         return sorted(

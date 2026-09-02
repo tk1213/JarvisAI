@@ -165,3 +165,131 @@ async def test_stop_all_is_safe_when_called_twice() -> None:
 
     assert manager.list_tasks() == []
     assert len(manager) == 0
+
+@pytest.mark.asyncio
+async def test_stop_all_caller_cancellation_does_not_interrupt_task_cleanup() -> None:
+    manager = TaskManager()
+
+    started = asyncio.Event()
+    cleanup_started = asyncio.Event()
+    release_cleanup = asyncio.Event()
+    cleanup_complete = asyncio.Event()
+
+    async def worker() -> None:
+        started.set()
+
+        try:
+            await asyncio.Future()
+
+        finally:
+            cleanup_started.set()
+            await release_cleanup.wait()
+            cleanup_complete.set()
+
+    manager.create_task(
+        "worker",
+        worker(),
+    )
+
+    await started.wait()
+
+    stop_task = asyncio.create_task(
+        manager.stop_all()
+    )
+
+    await cleanup_started.wait()
+
+    stop_task.cancel()
+
+    await asyncio.sleep(0)
+
+    assert cleanup_complete.is_set() is False
+
+    release_cleanup.set()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await stop_task
+
+    assert cleanup_complete.is_set()
+    assert manager.list_tasks() == []
+    assert len(manager) == 0
+
+@pytest.mark.asyncio
+async def test_stop_all_caller_cancellation_waits_for_all_task_cleanup() -> None:
+    manager = TaskManager()
+
+    first_started = asyncio.Event()
+    second_started = asyncio.Event()
+
+    first_cleanup_started = asyncio.Event()
+    second_cleanup_started = asyncio.Event()
+
+    release_cleanup = asyncio.Event()
+
+    first_cleanup_complete = asyncio.Event()
+    second_cleanup_complete = asyncio.Event()
+
+    async def worker(
+        started: asyncio.Event,
+        cleanup_started: asyncio.Event,
+        cleanup_complete: asyncio.Event,
+    ) -> None:
+        started.set()
+
+        try:
+            await asyncio.Future()
+
+        finally:
+            cleanup_started.set()
+            await release_cleanup.wait()
+            cleanup_complete.set()
+
+    manager.create_task(
+        "first",
+        worker(
+            first_started,
+            first_cleanup_started,
+            first_cleanup_complete,
+        ),
+    )
+
+    manager.create_task(
+        "second",
+        worker(
+            second_started,
+            second_cleanup_started,
+            second_cleanup_complete,
+        ),
+    )
+
+    await first_started.wait()
+    await second_started.wait()
+
+    stop_task = asyncio.create_task(
+        manager.stop_all()
+    )
+
+    await first_cleanup_started.wait()
+    await second_cleanup_started.wait()
+
+    stop_task.cancel()
+
+    await asyncio.sleep(0)
+
+    assert first_cleanup_complete.is_set() is False
+    assert second_cleanup_complete.is_set() is False
+
+    release_cleanup.set()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await stop_task
+
+    assert first_cleanup_complete.is_set()
+    assert second_cleanup_complete.is_set()
+
+    assert manager.list_tasks() == []
+    assert len(manager) == 0
