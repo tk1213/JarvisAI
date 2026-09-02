@@ -1651,6 +1651,41 @@ Implementation and regression commit:
 
 <commit hash>
 
+Sprint 8.23 speech worker cancellation boundary coverage
+hardening completed:
+
+- STT recorder worker cancellation semantics are now protected by
+  regression coverage for both ordinary cleanup failure and worker-side
+  cancellation during caller cancellation
+- TTS playback worker cancellation semantics are now protected by
+  equivalent regression coverage
+- caller cancellation remains the outward cancellation signal while
+  worker cleanup is allowed to complete
+- ordinary worker cleanup failures do not replace caller cancellation
+- recorder and playback worker cancellation paths remain observable and
+  deterministic
+- existing STT capture, calibration, generation, and playback
+  cancellation behavior remains intact
+- no production-code change was required because the current STT and
+  TTS implementations already satisfied the hardened contract
+- Sprint 8.22 TaskManager stop-all cancellation semantics remain intact
+
+Sprint 8.23 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1034 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+STT cleanup failure boundary : PASS
+STT worker cancellation      : PASS
+TTS cleanup failure boundary : PASS
+TTS worker cancellation      : PASS
+Production-code changes      : NONE
+
+Validation and coverage commit:
+
+a32aa7d
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
