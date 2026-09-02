@@ -317,9 +317,12 @@ async def test_runtime_handles_cancellation_without_recovery() -> None:
 
     runtime._recover_from_cycle_error = AsyncMock()  # type: ignore[method-assign]
 
-    await runtime.run(
-        language="th",
-    )
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await runtime.run(
+            language="th",
+        )
 
     runtime._recover_from_cycle_error.assert_not_awaited()  # type: ignore[attr-defined]
 
@@ -380,3 +383,85 @@ async def test_follow_up_timeout_waits_for_voice_cancellation_cleanup() -> None:
 
     assert cleanup_complete.is_set()
     assert voice.listen_for_text.await_count == 1
+
+@pytest.mark.asyncio
+async def test_runtime_propagates_caller_cancellation() -> None:
+    wake_started = asyncio.Event()
+
+    wake_word = Mock()
+
+    async def wait_for_wake_word() -> None:
+        wake_started.set()
+        await asyncio.Future()
+
+    wake_word.wait_for_wake_word = AsyncMock(
+        side_effect=wait_for_wake_word
+    )
+
+    voice = Mock()
+    conversation = Mock()
+    tts = Mock()
+
+    session = Mock()
+    session.set_state = AsyncMock()
+
+    runtime = AssistantRuntimeService(
+        wake_word=wake_word,
+        voice=voice,
+        conversation=conversation,
+        tts=tts,
+        session=session,
+    )
+
+    task = asyncio.create_task(
+        runtime.run()
+    )
+
+    await wake_started.wait()
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert runtime.running is False
+
+@pytest.mark.asyncio
+async def test_runtime_cancellation_completes_cleanup_before_propagating() -> None:
+    wake_started = asyncio.Event()
+
+    wake_word = Mock()
+
+    async def wait_for_wake_word() -> None:
+        wake_started.set()
+        await asyncio.Future()
+
+    wake_word.wait_for_wake_word = AsyncMock(
+        side_effect=wait_for_wake_word
+    )
+
+    session = Mock()
+    session.set_state = AsyncMock()
+
+    runtime = AssistantRuntimeService(
+        wake_word=wake_word,
+        voice=Mock(),
+        conversation=Mock(),
+        tts=Mock(),
+        session=session,
+    )
+
+    task = asyncio.create_task(
+        runtime.run()
+    )
+
+    await wake_started.wait()
+
+    task.cancel()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    assert runtime.running is False

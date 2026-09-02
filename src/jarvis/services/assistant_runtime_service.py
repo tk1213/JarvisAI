@@ -130,6 +130,7 @@ class AssistantRuntimeService:
 
         except asyncio.CancelledError:
             self._running = False
+            raise
 
         finally:
             self._running = False
