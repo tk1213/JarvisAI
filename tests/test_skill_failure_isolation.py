@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -84,6 +85,23 @@ class BrokenShutdownSkill(GoodSkill):
             "shutdown exploded"
         )
 
+class CancelledShutdownSkill(GoodSkill):
+    async def shutdown(self) -> None:
+        self._events.append(
+            f"stop:{self._name}"
+        )
+
+        raise asyncio.CancelledError()
+
+class FailingShutdownSkill(GoodSkill):
+    async def shutdown(self) -> None:
+        self._events.append(
+            f"stop:{self._name}"
+        )
+
+        raise RuntimeError(
+            "shutdown failed"
+        )
 
 @pytest.mark.asyncio
 async def test_broken_skill_does_not_stop_other_skills() -> None:
@@ -245,6 +263,92 @@ async def test_shutdown_failure_does_not_block_other_started_skills() -> None:
         "stop:last",
         "stop:first",
         "stop:broken",
+    ]
+
+    assert manager.list_started_skills() == []
+
+@pytest.mark.asyncio
+async def test_shutdown_finishes_remaining_skills_before_propagating_cancellation() -> None:
+    events: list[str] = []
+
+    manager = SkillManager()
+
+    manager.register(
+        GoodSkill(
+            "first",
+            events,
+        )
+    )
+    manager.register(
+        CancelledShutdownSkill(
+            "cancelled",
+            events,
+        )
+    )
+    manager.register(
+        GoodSkill(
+            "last",
+            events,
+        )
+    )
+
+    await manager.startup()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await manager.shutdown()
+
+    assert events == [
+        "start:cancelled",
+        "start:first",
+        "start:last",
+        "stop:last",
+        "stop:first",
+        "stop:cancelled",
+    ]
+
+    assert manager.list_started_skills() == []
+
+@pytest.mark.asyncio
+async def test_shutdown_preserves_cancellation_when_later_skill_fails() -> None:
+    events: list[str] = []
+
+    manager = SkillManager()
+
+    manager.register(
+        FailingShutdownSkill(
+            "alpha",
+            events,
+        )
+    )
+    manager.register(
+        CancelledShutdownSkill(
+            "beta",
+            events,
+        )
+    )
+    manager.register(
+        GoodSkill(
+            "gamma",
+            events,
+        )
+    )
+
+    await manager.startup()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await manager.shutdown()
+
+    assert events == [
+        "start:alpha",
+        "start:beta",
+        "start:gamma",
+        "stop:gamma",
+        "stop:beta",
+        "stop:alpha",
     ]
 
     assert manager.list_started_skills() == []

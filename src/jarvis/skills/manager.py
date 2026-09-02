@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from loguru import logger
@@ -132,6 +133,8 @@ class SkillManager:
             )
 
     async def shutdown(self) -> None:
+        cancellation: asyncio.CancelledError | None = None
+
         for skill in reversed(
             list(self._registry)
         ):
@@ -148,6 +151,10 @@ class SkillManager:
             try:
                 await skill.shutdown()
 
+            except asyncio.CancelledError as exc:
+                if cancellation is None:
+                    cancellation = exc
+
             except Exception:  # noqa: BLE001
                 logger.exception(
                     "Skill shutdown failed: {}",
@@ -158,6 +165,9 @@ class SkillManager:
                 self._started_skills.discard(
                     skill_name
                 )
+
+        if cancellation is not None:
+            raise cancellation
 
     async def health(self) -> dict[str, dict[str, Any]]:
         result: dict[str, dict[str, Any]] = {}
