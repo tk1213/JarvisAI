@@ -1712,6 +1712,37 @@ Implementation and coverage commit:
 
 bac10eb
 
+Sprint 8.25 skill shutdown cancellation semantics
+hardening completed:
+
+- SkillManager shutdown now preserves cancellation while continuing to
+  stop all remaining started skills
+- the first asyncio.CancelledError is retained and re-raised only after
+  remaining skill cleanup completes
+- ordinary skill shutdown failures remain isolated and do not block
+  cleanup of other started skills
+- started-skill bookkeeping is cleared for every attempted shutdown,
+  including failure and cancellation paths
+- regression coverage now locks cancellation propagation, remaining-skill
+  cleanup, and cancellation precedence over later ordinary failures
+
+Sprint 8.25 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1038 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Remaining skill cleanup      : PASS
+Cancellation propagation     : PASS
+Cancellation precedence      : PASS
+Started-skill state cleanup  : PASS
+
+Implementation and coverage commit:
+
+af07033
+
+The next Sprint 8 scope has not yet been fixed.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
