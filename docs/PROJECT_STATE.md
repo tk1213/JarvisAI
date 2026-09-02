@@ -1686,6 +1686,32 @@ Validation and coverage commit:
 
 a32aa7d
 
+Sprint 8.24 assistant runtime cancellation semantics
+hardening completed:
+
+- AssistantRuntimeService now propagates caller cancellation instead of
+  swallowing asyncio.CancelledError
+- runtime state cleanup still completes before cancellation is observed
+  by the caller
+- cancellation does not enter the ordinary recovery path
+- existing runtime wake-transition behavior remains intact
+- regression coverage now locks both caller-cancellation propagation and
+  post-cancellation runtime state cleanup
+
+Sprint 8.24 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1036 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Caller cancellation          : PASS
+Recovery bypass on cancel    : PASS
+Runtime cleanup after cancel : PASS
+
+Implementation and coverage commit:
+
+bac10eb
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
