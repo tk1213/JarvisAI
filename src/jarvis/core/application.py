@@ -440,7 +440,31 @@ class JarvisApplication:
             "Rolling back Jarvis Application startup..."
         )
 
-        await self._safe_async_cleanup(
+        cancellation: asyncio.CancelledError | None = None
+
+        async def cleanup_async(
+            name: str,
+            cleanup: Callable[[], Awaitable[Any]],
+        ) -> None:
+            nonlocal cancellation
+
+            try:
+                await self._safe_async_cleanup(
+                    name,
+                    cleanup,
+                )
+
+            except asyncio.CancelledError as exc:
+                if cancellation is None:
+                    cancellation = exc
+
+                log.warning(
+                    "Startup rollback cleanup cancelled: {}; "
+                    "continuing remaining cleanup",
+                    name,
+                )
+
+        await cleanup_async(
             "background tasks",
             task_manager.stop_all,
         )
@@ -451,7 +475,7 @@ class JarvisApplication:
                 SkillManager,
             )
 
-            await self._safe_async_cleanup(
+            await cleanup_async(
                 "skills",
                 skill_manager.shutdown,
             )
@@ -464,7 +488,7 @@ class JarvisApplication:
                 SmartHomeService,
             )
 
-            await self._safe_async_cleanup(
+            await cleanup_async(
                 "smart home",
                 smart_home_service.disconnect,
             )
@@ -477,7 +501,7 @@ class JarvisApplication:
                 DatabaseManager,
             )
 
-            await self._safe_async_cleanup(
+            await cleanup_async(
                 "database",
                 database.shutdown,
             )
@@ -514,9 +538,12 @@ class JarvisApplication:
         self.started = False
 
         log.info(
-            "Jarvis Application startup rollback complete"
+            "Jarvis Application startup rollback completed"
         )
 
+        if cancellation is not None:
+            raise cancellation
+    
     async def shutdown(self) -> None:
         if (
             not self.started

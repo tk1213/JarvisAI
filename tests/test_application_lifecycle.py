@@ -782,3 +782,157 @@ async def test_shutdown_preserves_cancellation_when_later_cleanup_fails() -> Non
 
     assert app.started is False
     assert len(container) == 0
+
+@pytest.mark.asyncio
+async def test_startup_rollback_finishes_remaining_cleanup_before_propagating_cancellation() -> None:
+    app = JarvisApplication()
+
+    skill_manager = Mock()
+    skill_manager.shutdown = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    smart_home = Mock()
+    smart_home.disconnect = AsyncMock()
+
+    database = Mock()
+    database.shutdown = AsyncMock()
+
+    system = Mock()
+    system.shutdown = Mock()
+
+    app._skills_started = True
+    app._smart_home_connected = True
+    app._database_started = True
+    app._system_started = True
+
+    def resolve(
+        name: str,
+        expected_type: object,
+    ) -> object:
+        del expected_type
+
+        services = {
+            "skill_manager": skill_manager,
+            "smart_home": smart_home,
+            "database": database,
+            "system": system,
+        }
+
+        return services[name]
+
+    with (
+        patch.object(
+            container,
+            "resolve",
+            side_effect=resolve,
+        ),
+        pytest.raises(
+            asyncio.CancelledError
+        ),
+    ):
+        await app._rollback_startup()
+
+    skill_manager.shutdown.assert_awaited_once()
+    smart_home.disconnect.assert_awaited_once()
+    database.shutdown.assert_awaited_once()
+    system.shutdown.assert_called_once()
+
+    assert app._skills_started is False
+    assert app._smart_home_connected is False
+    assert app._database_started is False
+    assert app._system_started is False
+    assert app.started is False
+    assert len(container) == 0
+
+@pytest.mark.asyncio
+async def test_startup_rollback_preserves_cancellation_when_later_cleanup_fails() -> None:
+    app = JarvisApplication()
+
+    skill_manager = Mock()
+    skill_manager.shutdown = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    smart_home = Mock()
+    smart_home.disconnect = AsyncMock(
+        side_effect=RuntimeError(
+            "smart home rollback failed"
+        )
+    )
+
+    database = Mock()
+    database.shutdown = AsyncMock()
+
+    system = Mock()
+    system.shutdown = Mock()
+
+    app._skills_started = True
+    app._smart_home_connected = True
+    app._database_started = True
+    app._system_started = True
+
+    def resolve(
+        name: str,
+        expected_type: object,
+    ) -> object:
+        del expected_type
+
+        services = {
+            "skill_manager": skill_manager,
+            "smart_home": smart_home,
+            "database": database,
+            "system": system,
+        }
+
+        return services[name]
+
+    with (
+        patch.object(
+            container,
+            "resolve",
+            side_effect=resolve,
+        ),
+        pytest.raises(
+            asyncio.CancelledError
+        ),
+    ):
+        await app._rollback_startup()
+
+    skill_manager.shutdown.assert_awaited_once()
+    smart_home.disconnect.assert_awaited_once()
+    database.shutdown.assert_awaited_once()
+    system.shutdown.assert_called_once()
+
+    assert app._skills_started is False
+    assert app._smart_home_connected is False
+    assert app._database_started is False
+    assert app._system_started is False
+    assert app.started is False
+    assert len(container) == 0
+
+@pytest.mark.asyncio
+async def test_startup_propagates_rollback_cancellation() -> None:
+    app = JarvisApplication()
+
+    app._rollback_startup = AsyncMock(  # type: ignore[method-assign]
+        side_effect=asyncio.CancelledError()
+    )
+
+    with (
+        patch(
+            "jarvis.core.application.ServiceFactory.register_all",
+            side_effect=RuntimeError(
+                "startup failed"
+            ),
+        ),
+        pytest.raises(
+            asyncio.CancelledError
+        ),
+    ):
+        await app.start(
+            start_background_tasks=False,
+        )
+
+    app._rollback_startup.assert_awaited_once()
+    assert app.started is False
