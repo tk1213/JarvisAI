@@ -936,3 +936,70 @@ async def test_startup_propagates_rollback_cancellation() -> None:
 
     app._rollback_startup.assert_awaited_once()
     assert app.started is False
+
+@pytest.mark.asyncio
+async def test_startup_caller_cancellation_rolls_back_started_resources() -> None:
+    app = JarvisApplication()
+
+    database = Mock()
+    database_started = asyncio.Event()
+
+    async def blocking_database_startup() -> None:
+        database_started.set()
+        await asyncio.Future()
+
+    database.startup = AsyncMock(
+        side_effect=blocking_database_startup
+    )
+    database.shutdown = AsyncMock()
+    database.session = empty_database_session
+
+    system = Mock()
+    system.startup = Mock()
+    system.shutdown = Mock()
+
+    original_resolve = container.resolve
+
+    def resolve(
+        name: str,
+        expected_type=None,
+    ):
+        if name == "database":
+            return database
+
+        if name == "system":
+            return system
+
+        return original_resolve(
+            name,
+            expected_type,
+        )
+
+    with patch.object(
+        container,
+        "resolve",
+        side_effect=resolve,
+    ):
+        task = asyncio.create_task(
+            app.start(
+                start_background_tasks=False,
+            )
+        )
+
+        await database_started.wait()
+
+        task.cancel()
+
+        with pytest.raises(
+            asyncio.CancelledError
+        ):
+            await task
+
+    system.startup.assert_called_once()
+    system.shutdown.assert_called_once()
+
+    database.startup.assert_awaited_once()
+
+    assert app.started is False
+    assert app._system_started is False
+    assert len(container) == 0

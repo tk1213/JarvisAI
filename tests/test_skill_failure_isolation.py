@@ -103,6 +103,28 @@ class FailingShutdownSkill(GoodSkill):
             "shutdown failed"
         )
 
+class BlockingStartupSkill(GoodSkill):
+    def __init__(
+        self,
+        name: str,
+        events: list[str],
+        entered: asyncio.Event,
+    ) -> None:
+        super().__init__(
+            name,
+            events,
+        )
+        self._entered = entered
+
+    async def startup(self) -> None:
+        self._events.append(
+            f"start:{self._name}"
+        )
+
+        self._entered.set()
+
+        await asyncio.Future()
+
 @pytest.mark.asyncio
 async def test_broken_skill_does_not_stop_other_skills() -> None:
     events: list[str] = []
@@ -348,6 +370,90 @@ async def test_shutdown_preserves_cancellation_when_later_skill_fails() -> None:
         "start:gamma",
         "stop:gamma",
         "stop:beta",
+        "stop:alpha",
+    ]
+
+    assert manager.list_started_skills() == []
+
+@pytest.mark.asyncio
+async def test_startup_cancellation_cleans_already_started_skills() -> None:
+    events: list[str] = []
+    entered = asyncio.Event()
+
+    manager = SkillManager()
+
+    manager.register(
+        GoodSkill(
+            "alpha",
+            events,
+        )
+    )
+    manager.register(
+        BlockingStartupSkill(
+            "omega",
+            events,
+            entered,
+        )
+    )
+
+    task = asyncio.create_task(
+        manager.startup()
+    )
+
+    await entered.wait()
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert events == [
+        "start:alpha",
+        "start:omega",
+        "stop:alpha",
+    ]
+
+    assert manager.list_started_skills() == []
+
+@pytest.mark.asyncio
+async def test_startup_cancellation_preserves_cancellation_when_cleanup_fails() -> None:
+    events: list[str] = []
+    entered = asyncio.Event()
+
+    manager = SkillManager()
+
+    manager.register(
+        FailingShutdownSkill(
+            "alpha",
+            events,
+        )
+    )
+    manager.register(
+        BlockingStartupSkill(
+            "omega",
+            events,
+            entered,
+        )
+    )
+
+    task = asyncio.create_task(
+        manager.startup()
+    )
+
+    await entered.wait()
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert events == [
+        "start:alpha",
+        "start:omega",
         "stop:alpha",
     ]
 

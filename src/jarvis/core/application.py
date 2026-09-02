@@ -423,9 +423,22 @@ class JarvisApplication:
                     heartbeat_service.run(),
                 )
 
-            
             self.started = True
             log.info("Jarvis Application Ready")
+
+        except asyncio.CancelledError:
+            log.warning(
+                "Jarvis Application startup cancelled; "
+                "rolling back started resources"
+            )
+
+            try:
+                await self._rollback_startup()
+
+            except asyncio.CancelledError:
+                pass
+
+            raise
 
         except Exception:
             log.exception(

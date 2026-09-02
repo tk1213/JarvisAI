@@ -105,12 +105,18 @@ class SkillManager:
             try:
                 await skill.startup()
 
+            except asyncio.CancelledError:
+                try:
+                    await self.shutdown()
+
+                except asyncio.CancelledError:
+                    pass
+
+                raise
+
             except Exception as exc:  # noqa: BLE001
                 skill.enabled = False
-
-                self._startup_errors[
-                    skill_name
-                ] = str(exc)
+                self._startup_errors[skill_name] = str(exc)
 
                 logger.exception(
                     "Skill startup failed: {}",
@@ -119,9 +125,7 @@ class SkillManager:
 
                 continue
 
-            self._started_skills.add(
-                skill_name
-            )
+            self._started_skills.add(skill_name)
 
         if self._startup_errors:
             logger.warning(
