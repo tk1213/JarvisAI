@@ -5,6 +5,7 @@ from collections import defaultdict
 from collections.abc import Awaitable, Callable
 
 from jarvis.core.events import Event
+from jarvis.core.logger import log
 
 EventHandler = Callable[[Event], Awaitable[None]]
 
@@ -46,9 +47,24 @@ class EventBus:
         if not handlers:
             return
 
-        await asyncio.gather(
-            *(handler(event) for handler in handlers)
+        results = await asyncio.gather(
+            *(handler(event) for handler in handlers),
+            return_exceptions=True,
         )
+
+        for result in results:
+            if isinstance(
+                result,
+                asyncio.CancelledError,
+            ):
+                raise result
+
+            if isinstance(result, Exception):
+                log.error(
+                    "Event handler failed for '{}': {!r}",
+                    event.name,
+                    result,
+                )
 
     def clear(self) -> None:
         self._handlers.clear()
