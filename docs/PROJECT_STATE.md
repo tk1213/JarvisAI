@@ -1547,6 +1547,42 @@ Implementation and regression commit:
 
 43a3b27
 
+Sprint 8.20 EventBus handler failure isolation and cancellation
+semantics hardening completed:
+
+- ordinary EventBus handler failures are now isolated from event
+  publishers instead of propagating into the caller's primary flow
+- failures from one event handler do not prevent sibling handlers from
+  completing
+- isolated ordinary handler failures remain observable through error
+  logging
+- handler-originated CancelledError remains observable and is not
+  converted into an ordinary handler failure
+- caller cancellation of EventBus publishing continues to propagate and
+  cancels unfinished handler work
+- SessionManager state transitions are no longer reported as failed
+  solely because a state-change observer raises an ordinary exception
+- EventBus and SessionManager manual validation scripts were replaced
+  with automated regression coverage
+- Sprint 8.19 application shutdown cancellation semantics remain intact
+
+Sprint 8.20 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1025 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Handler failure isolation    : PASS
+Sibling handler completion   : PASS
+Failure observability        : PASS
+Handler cancellation         : PASS
+Caller cancellation          : PASS
+Session transition isolation : PASS
+
+Implementation and regression commit:
+
+7d25a3d
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
