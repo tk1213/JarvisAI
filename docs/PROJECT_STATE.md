@@ -1618,6 +1618,39 @@ Implementation and regression commit:
 
 f476274
 
+Sprint 8.22 TaskManager stop-all cancellation semantics
+hardening completed:
+
+- TaskManager stop_all now protects background task cancellation cleanup
+  from caller cancellation
+- caller cancellation remains observable after managed task cleanup
+  completes
+- background tasks are allowed to finish their cancellation cleanup
+  before stop_all exits
+- multi-task shutdown waits for all managed task cleanup paths to finish
+- task registry cleanup remains deterministic even when stop_all is
+  cancelled by its caller
+- existing task completion, duplicate-name protection, and repeated
+  stop_all behavior remain intact
+- Sprint 8.21 application startup rollback cancellation semantics remain
+  intact
+
+Sprint 8.22 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1030 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Caller cancellation          : PASS
+Task cleanup completion      : PASS
+Multi-task cleanup           : PASS
+Cancellation propagation     : PASS
+Task registry cleanup        : PASS
+
+Implementation and regression commit:
+
+<commit hash>
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
