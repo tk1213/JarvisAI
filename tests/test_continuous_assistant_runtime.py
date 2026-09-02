@@ -181,3 +181,93 @@ async def test_runtime_rejects_invalid_max_turns() -> None:
         await runtime.run(
             max_turns=0,
         )
+
+@pytest.mark.asyncio
+async def test_runtime_propagates_external_caller_cancellation() -> None:
+    entered = asyncio.Event()
+
+    async def blocked_turn(
+        *,
+        language: str,
+    ) -> WakeActivatedTurnResult:
+        del language
+
+        entered.set()
+        await asyncio.Future()
+
+        raise AssertionError(
+            "unreachable"
+        )
+
+    turn_runtime = Mock()
+    turn_runtime.run = AsyncMock(
+        side_effect=blocked_turn,
+    )
+
+    runtime = ContinuousAssistantRuntime(
+        turn_runtime=turn_runtime,
+    )
+
+    task = asyncio.create_task(
+        runtime.run(
+            max_turns=2,
+        )
+    )
+
+    await entered.wait()
+
+    assert runtime.running is True
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert runtime.running is False
+
+@pytest.mark.asyncio
+async def test_runtime_cancellation_resets_running_before_propagating() -> None:
+    entered = asyncio.Event()
+
+    async def blocked_turn(
+        *,
+        language: str,
+    ) -> WakeActivatedTurnResult:
+        del language
+
+        entered.set()
+        await asyncio.Future()
+
+        raise AssertionError(
+            "unreachable"
+        )
+
+    turn_runtime = Mock()
+    turn_runtime.run = AsyncMock(
+        side_effect=blocked_turn,
+    )
+
+    runtime = ContinuousAssistantRuntime(
+        turn_runtime=turn_runtime,
+    )
+
+    task = asyncio.create_task(
+        runtime.run(
+            max_turns=2,
+        )
+    )
+
+    await entered.wait()
+
+    assert runtime.running is True
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert runtime.running is False

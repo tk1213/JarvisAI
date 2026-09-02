@@ -86,6 +86,14 @@ class ContinuousAssistantRuntime:
                         language=language,
                     )
                 except asyncio.CancelledError:
+                    current_task = asyncio.current_task()
+
+                    if (
+                        current_task is not None
+                        and current_task.cancelling()
+                    ):
+                        raise
+
                     cancellation_stage = (
                         f"{self._turn_runtime.stage}:"
                         f"{self._turn_runtime.transition.stage}"
