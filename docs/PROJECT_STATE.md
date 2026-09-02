@@ -1583,6 +1583,41 @@ Implementation and regression commit:
 
 7d25a3d
 
+Sprint 8.21 application startup rollback cancellation semantics
+hardening completed:
+
+- startup rollback now preserves cleanup progress when an async cleanup
+  step is cancelled
+- the first CancelledError is retained while remaining startup rollback
+  resources continue through cleanup
+- Smart Home, database, system, wake-word, and remaining lifecycle
+  resources are not skipped solely because an earlier async rollback
+  cleanup was cancelled
+- cancellation remains observable after startup rollback completes and
+  is not converted into an ordinary cleanup failure
+- ordinary cleanup failures occurring after cancellation do not replace
+  the original cancellation signal
+- startup() preserves rollback-originated cancellation at the outer
+  startup boundary
+- shared safe cleanup helpers were intentionally left unchanged so the
+  hardened semantics remain local to the startup rollback boundary
+- Sprint 8.19 shutdown cancellation semantics remain intact
+
+Sprint 8.21 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1028 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Rollback cleanup completion  : PASS
+Cancellation propagation     : PASS
+Cancellation preservation    : PASS
+Startup boundary semantics   : PASS
+
+Implementation and regression commit:
+
+f476274
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
