@@ -1772,6 +1772,42 @@ Implementation and coverage commit:
 
 41c3ce0
 
+Sprint 8.27 application and skill startup caller cancellation
+rollback hardening completed:
+
+- JarvisApplication startup now rolls back resources that were already
+  started when the caller cancels app.start()
+- caller cancellation is preserved and re-raised only after startup
+  rollback completes
+- startup rollback continues to use the existing cleanup-isolation
+  contract established in Sprint 8.21
+- SkillManager startup now cleans up skills that started successfully
+  before a later skill startup is cancelled
+- partially started skills are not recorded as successfully started
+- ordinary skill shutdown failures during cancellation cleanup do not
+  replace the original asyncio.CancelledError
+- existing degraded skill-startup behavior for ordinary exceptions
+  remains intact
+- Smart Home degraded startup behavior remains unchanged
+- regression coverage now locks application-level startup rollback,
+  partial skill-startup cleanup, and cancellation precedence over
+  ordinary cleanup failure
+
+Sprint 8.27 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1043 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Application startup rollback : PASS
+Partial skill cleanup        : PASS
+Caller cancellation          : PASS
+Cancellation precedence      : PASS
+
+Implementation and coverage commit:
+
+88ee300
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
