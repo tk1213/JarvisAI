@@ -1741,7 +1741,36 @@ Implementation and coverage commit:
 
 af07033
 
-The next Sprint 8 scope has not yet been fixed.
+Sprint 8.26 continuous assistant runtime caller cancellation
+semantics hardening completed:
+
+- ContinuousAssistantRuntime now distinguishes external caller
+  cancellation from child turn-runtime cancellation
+- external task cancellation now propagates asyncio.CancelledError
+  instead of being converted into a normal cancelled run result
+- child-originated cancellation retains the existing CANCELLED result
+  contract and cancellation-stage reporting
+- graceful request_stop behavior remains separate and continues to
+  return STOP_REQUESTED
+- runtime running state is reset before caller cancellation is observed
+  by the caller
+- regression coverage now locks caller-cancellation propagation while
+  preserving existing child-cancellation and graceful-stop behavior
+
+Sprint 8.26 validation baseline:
+
+Ruff                         : PASS
+Full regression              : 1040 passed
+Compile validation           : PASS
+Diff whitespace validation   : PASS
+Caller cancellation          : PASS
+Child cancellation contract  : PASS
+Graceful stop contract       : PASS
+Runtime state cleanup        : PASS
+
+Implementation and coverage commit:
+
+41c3ce0
 
 The next Sprint 8 scope has not yet been fixed.
 
