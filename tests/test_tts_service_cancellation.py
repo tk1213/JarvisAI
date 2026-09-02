@@ -176,3 +176,144 @@ async def test_speak_cancellation_during_generation_does_not_stop_player(
 
     player.play.assert_not_called()
     player.stop.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_speak_preserves_caller_cancellation_when_playback_cleanup_fails(
+    tmp_path: Path,
+) -> None:
+    audio_file = tmp_path / "reply.wav"
+    audio_file.touch()
+
+    playback_started = threading.Event()
+    release_playback = threading.Event()
+
+    player = Mock()
+
+    def play(
+        audio_file: Path,
+        *,
+        on_playback_start,
+    ) -> None:
+        del audio_file
+
+        on_playback_start()
+        playback_started.set()
+
+        release_playback.wait()
+
+        raise RuntimeError(
+            "playback cleanup failed"
+        )
+
+    player.play = Mock(
+        side_effect=play
+    )
+
+    def stop() -> None:
+        release_playback.set()
+
+    player.stop = Mock(
+        side_effect=stop
+    )
+
+    tts = Mock()
+    tts.generate = AsyncMock(
+        return_value=audio_file
+    )
+
+    service = TTSService(
+        player=player,
+        tts=tts,
+    )
+
+    task = asyncio.create_task(
+        service.speak(
+            text="hello",
+            output=str(audio_file),
+        )
+    )
+
+    started = await asyncio.to_thread(
+        playback_started.wait,
+        1.0,
+    )
+
+    assert started is True
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    player.stop.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_speak_preserves_caller_cancellation_when_playback_worker_is_cancelled(
+    tmp_path: Path,
+) -> None:
+    audio_file = tmp_path / "reply.wav"
+    audio_file.touch()
+
+    playback_started = threading.Event()
+    release_playback = threading.Event()
+
+    player = Mock()
+
+    def play(
+        audio_file: Path,
+        *,
+        on_playback_start,
+    ) -> None:
+        del audio_file
+
+        on_playback_start()
+        playback_started.set()
+        release_playback.wait()
+
+        raise asyncio.CancelledError()
+
+    player.play = Mock(
+        side_effect=play
+    )
+
+    def stop() -> None:
+        release_playback.set()
+
+    player.stop = Mock(
+        side_effect=stop
+    )
+
+    tts = Mock()
+    tts.generate = AsyncMock(
+        return_value=audio_file
+    )
+
+    service = TTSService(
+        player=player,
+        tts=tts,
+    )
+
+    task = asyncio.create_task(
+        service.speak(
+            text="hello",
+            output=str(audio_file),
+        )
+    )
+
+    started = await asyncio.to_thread(
+        playback_started.wait,
+        1.0,
+    )
+
+    assert started is True
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    player.stop.assert_called_once()

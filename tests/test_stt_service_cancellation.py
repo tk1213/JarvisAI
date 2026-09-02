@@ -147,3 +147,75 @@ async def test_listen_vad_cancellation_stops_calibration_worker() -> None:
         )
 
     assert recorder.calibration_stopped.is_set()
+
+@pytest.mark.asyncio
+async def test_recorder_worker_preserves_caller_cancellation_when_worker_is_cancelled() -> None:
+    cancel_event = threading.Event()
+    worker_started = threading.Event()
+
+    def operation() -> None:
+        worker_started.set()
+        cancel_event.wait()
+
+        raise asyncio.CancelledError()
+
+    task = asyncio.create_task(
+        STTService._run_recorder_worker(
+            operation,
+            cancel_event=cancel_event,
+            worker_name="test-recorder-worker",
+        )
+    )
+
+    started = await asyncio.to_thread(
+        worker_started.wait,
+        1.0,
+    )
+
+    assert started is True
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert cancel_event.is_set()
+
+@pytest.mark.asyncio
+async def test_recorder_worker_preserves_caller_cancellation_when_cleanup_worker_fails() -> None:
+    cancel_event = threading.Event()
+    worker_started = threading.Event()
+
+    def operation() -> None:
+        worker_started.set()
+        cancel_event.wait()
+
+        raise RuntimeError(
+            "recorder cleanup failed"
+        )
+
+    task = asyncio.create_task(
+        STTService._run_recorder_worker(
+            operation,
+            cancel_event=cancel_event,
+            worker_name="test-recorder-worker",
+        )
+    )
+
+    started = await asyncio.to_thread(
+        worker_started.wait,
+        1.0,
+    )
+
+    assert started is True
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert cancel_event.is_set()
