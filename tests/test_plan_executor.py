@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -232,4 +233,58 @@ async def test_failure_result_contains_error() -> None:
     assert (
         result.step_results[0].error
         == "failed: system.ping"
+    )
+
+@pytest.mark.asyncio
+async def test_cancellation_finalizes_active_and_pending_step_states() -> None:
+    entered = asyncio.Event()
+
+    class BlockingRouter:
+        async def execute_request(
+            self,
+            request,
+        ) -> Any:
+            del request
+            entered.set()
+            await asyncio.Future()
+
+    executor = PlanExecutor(
+        BlockingRouter(),  # type: ignore[arg-type]
+    )
+
+    plan = make_plan()
+
+    task = asyncio.create_task(
+        executor.execute(
+            plan
+        )
+    )
+
+    await entered.wait()
+
+    assert plan.status is PlanStatus.RUNNING
+    assert (
+        plan.steps[0].status
+        is PlanStepStatus.RUNNING
+    )
+    assert (
+        plan.steps[1].status
+        is PlanStepStatus.PENDING
+    )
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await task
+
+    assert plan.status is PlanStatus.CANCELLED
+    assert (
+        plan.steps[0].status
+        is PlanStepStatus.FAILED
+    )
+    assert (
+        plan.steps[1].status
+        is PlanStepStatus.SKIPPED
     )
