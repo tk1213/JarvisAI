@@ -1864,6 +1864,27 @@ Validation:
 Commit:
 - `5c07456 test: harden voice turn cancellation coverage`
 
+### Sprint 8.31 — Voice dialogue cancellation coverage hardening
+
+Scope:
+- Harden cancellation regression coverage for `VoiceDialogueRuntime`.
+- Verify cancellation propagates from the initial voice turn.
+- Verify cancellation propagates from a smart-home follow-up turn.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation regression coverage in:
+  - `tests/test_voice_dialogue_runtime.py`
+
+Validation:
+- Full regression: 1050 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `f372c78 test: harden voice dialogue cancellation coverage`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
