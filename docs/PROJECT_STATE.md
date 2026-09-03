@@ -2047,6 +2047,29 @@ Validation:
 Commit:
 - `2a50130 test: harden database cancellation lifecycle`
 
+### Sprint 8.39 - Session cancellation state hardening
+
+Scope:
+- Harden SessionManager cancellation state coverage.
+- Verify external caller cancellation during state-change publication propagates to the caller.
+- Verify a state transition committed before publication remains committed after caller cancellation.
+- Verify handler-originated cancellation propagates through the event boundary.
+- Verify handler-originated cancellation does not roll back the committed session state.
+
+Implementation:
+- No production code changes were required.
+- Added session cancellation regression coverage in:
+  - `tests/test_session_manager.py`
+
+Validation:
+- Full regression: 1063 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `5ca071f test: harden session cancellation state`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
