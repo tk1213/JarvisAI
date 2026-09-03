@@ -2095,6 +2095,32 @@ Validation:
 Commit:
 - `be7515a test: harden memory audit cancellation outcomes`
 
+### Sprint 8.41 - Conversation persistence cancellation boundary hardening
+
+Scope:
+- Harden conversation persistence cancellation boundary coverage.
+- Verify cancellation originating from conversation memory persistence propagates to the caller.
+- Verify external caller cancellation while conversation persistence is in progress propagates to the caller.
+- Verify cancelled persistence does not publish `conversation.response`.
+- Verify a cancelled persistence operation does not falsely complete the conversation turn.
+- Verify conversation turn lifecycle active-source state is cleared after cancellation.
+
+Implementation:
+- No production code changes were required.
+- Existing cancellation propagation and conversation turn lifecycle behavior were already correct.
+- Added conversation persistence cancellation regression coverage in:
+  - `tests/test_conversation_manager_execution_boundary.py`
+
+Validation:
+- Focused conversation manager execution-boundary suite: 6 passed
+- Full regression: 1067 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `e92a092 test: harden conversation persistence cancellation`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
