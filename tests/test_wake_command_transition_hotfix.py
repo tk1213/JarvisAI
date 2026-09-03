@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -8,7 +9,10 @@ from jarvis.wake.activation import (
     WakeActivationResult,
     WakeActivationStatus,
 )
-from jarvis.wake.command_transition import WakeCommandTransition
+from jarvis.wake.command_transition import (
+    WakeCommandTransition,
+    WakeCommandTransitionStage,
+)
 
 
 @pytest.mark.asyncio
@@ -77,3 +81,110 @@ def test_negative_settle_delay_is_rejected() -> None:
             tts=Mock(),
             post_ack_settle_seconds=-0.1,
         )
+
+@pytest.mark.asyncio
+async def test_transition_preserves_acknowledgement_stage_on_cancellation() -> None:
+    wake = Mock()
+    wake.wait = AsyncMock(
+        return_value=WakeActivationResult(
+            status=WakeActivationStatus.DETECTED,
+            score=0.9,
+        )
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    voice = Mock()
+    voice.listen_for_text = AsyncMock()
+
+    transition = WakeCommandTransition(
+        wake=wake,
+        voice=voice,
+        tts=tts,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await transition.run()
+
+    assert transition.stage is (
+        WakeCommandTransitionStage.ACKNOWLEDGEMENT
+    )
+    voice.listen_for_text.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_transition_preserves_settle_stage_on_cancellation() -> None:
+    wake = Mock()
+    wake.wait = AsyncMock(
+        return_value=WakeActivationResult(
+            status=WakeActivationStatus.DETECTED,
+            score=0.9,
+        )
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    voice = Mock()
+    voice.listen_for_text = AsyncMock()
+
+    transition = WakeCommandTransition(
+        wake=wake,
+        voice=voice,
+        tts=tts,
+        post_ack_settle_seconds=0.8,
+    )
+
+    with patch(
+        "jarvis.wake.command_transition.asyncio.sleep",
+        side_effect=asyncio.CancelledError(),
+    ):
+        with pytest.raises(
+            asyncio.CancelledError
+        ):
+            await transition.run()
+
+    assert transition.stage is (
+        WakeCommandTransitionStage.POST_ACK_SETTLE
+    )
+    voice.listen_for_text.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_transition_preserves_command_listen_stage_on_cancellation() -> None:
+    wake = Mock()
+    wake.wait = AsyncMock(
+        return_value=WakeActivationResult(
+            status=WakeActivationStatus.DETECTED,
+            score=0.9,
+        )
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    voice = Mock()
+    voice.listen_for_text = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    transition = WakeCommandTransition(
+        wake=wake,
+        voice=voice,
+        tts=tts,
+        post_ack_settle_seconds=0,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await transition.run()
+
+    assert transition.stage is (
+        WakeCommandTransitionStage.COMMAND_LISTEN
+    )
