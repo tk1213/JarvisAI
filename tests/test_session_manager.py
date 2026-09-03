@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from jarvis.core.event_bus import event_bus
@@ -90,5 +92,65 @@ async def test_state_transition_survives_observer_failure() -> None:
     await session.set_state(
         SessionState.IDLE
     )
+
+    assert session.state is SessionState.IDLE
+
+@pytest.mark.asyncio
+async def test_state_transition_remains_committed_when_publish_is_cancelled() -> None:
+    session = SessionManager()
+    handler_entered = asyncio.Event()
+
+    async def blocking_handler(
+        event: Event,
+    ) -> None:
+        del event
+        handler_entered.set()
+        await asyncio.Future()
+
+    event_bus.subscribe(
+        "session.state_changed",
+        blocking_handler,
+    )
+
+    task = asyncio.create_task(
+        session.set_state(
+            SessionState.IDLE
+        )
+    )
+
+    await handler_entered.wait()
+
+    assert session.state is SessionState.IDLE
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await task
+
+    assert session.state is SessionState.IDLE 
+
+@pytest.mark.asyncio
+async def test_state_transition_remains_committed_when_handler_is_cancelled() -> None:
+    session = SessionManager()
+
+    async def cancelling_handler(
+        event: Event,
+    ) -> None:
+        del event
+        raise asyncio.CancelledError
+
+    event_bus.subscribe(
+        "session.state_changed",
+        cancelling_handler,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await session.set_state(
+            SessionState.IDLE
+        )
 
     assert session.state is SessionState.IDLE
