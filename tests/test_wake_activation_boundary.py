@@ -269,3 +269,66 @@ async def test_parent_cancellation_does_not_write_raw_console_diagnostic(
 
     assert "[WAKE CANCEL DIAGNOSTIC]" not in output
     assert boundary.active is False
+
+@pytest.mark.asyncio
+async def test_cancel_active_wait_caller_cancellation_preserves_wake_cleanup() -> None:
+    started = asyncio.Event()
+    cleanup_started = asyncio.Event()
+    allow_cleanup = asyncio.Event()
+    cleanup_finished = asyncio.Event()
+
+    async def wait_for_wake_word() -> float:
+        started.set()
+
+        try:
+            await asyncio.Future()
+
+        finally:
+            cleanup_started.set()
+            await allow_cleanup.wait()
+            cleanup_finished.set()
+
+        return 0.0
+
+    wake_word = Mock()
+    wake_word.closed = False
+    wake_word.wait_for_wake_word = AsyncMock(
+        side_effect=wait_for_wake_word
+    )
+
+    boundary = WakeActivationBoundary(
+        wake_word
+    )
+
+    wait_task = asyncio.create_task(
+        boundary.wait()
+    )
+
+    await started.wait()
+
+    cancel_task = asyncio.create_task(
+        boundary.cancel_active_wait()
+    )
+
+    await cleanup_started.wait()
+
+    cancel_task.cancel()
+
+    await asyncio.sleep(0)
+
+    assert cleanup_finished.is_set() is False
+
+    allow_cleanup.set()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await cancel_task
+
+    assert cleanup_finished.is_set() is True
+    assert boundary.active is False
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await wait_task

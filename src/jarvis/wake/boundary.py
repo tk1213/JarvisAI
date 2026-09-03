@@ -95,9 +95,25 @@ class WakeActivationBoundary:
         task.cancel()
 
         try:
-            await task
+            await asyncio.shield(
+                task
+            )
+
         except asyncio.CancelledError:
-            pass
+            current_task = asyncio.current_task()
+
+            if (
+                current_task is not None
+                and current_task.cancelling()
+            ):
+                try:
+                    await task
+
+                except asyncio.CancelledError:
+                    pass
+
+                raise
+
         finally:
             if self._active_task is task:
                 self._active_task = None
