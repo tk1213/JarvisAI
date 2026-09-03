@@ -1808,6 +1808,23 @@ Implementation and coverage commit:
 
 88ee300
 
+Sprint 8.28 — Conversation turn cancellation state cleanup hardening
+
+Validated:
+- external cancellation propagates as asyncio.CancelledError
+- active conversation source is cleared on cancellation
+- cancellation does not create a FAILED turn result
+- cancellation does not overwrite the previous last_result
+- focused conversation lifecycle regression: 19 passed
+- conversation turn tests: 6 passed
+- full regression: 1045 passed
+- Ruff: PASS
+- py_compile: PASS
+- git diff --check: PASS
+
+Implementation commit:
+- 5cc0f54 fix: clear conversation turn state on cancellation
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
