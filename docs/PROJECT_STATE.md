@@ -1842,6 +1842,28 @@ Implementation and coverage commit:
 
 31b9cb5
 
+### Sprint 8.30 — Voice turn cancellation coverage hardening
+
+Scope:
+- Harden cancellation regression coverage for `VoiceTurnRuntime`.
+- Verify cancellation propagates from the STT stage.
+- Verify cancellation propagates from the conversation stage.
+- Ensure later stages are not invoked after cancellation.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation regression coverage in:
+  - `tests/test_voice_turn_runtime.py`
+
+Validation:
+- Full regression: 1048 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `5c07456 test: harden voice turn cancellation coverage`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
