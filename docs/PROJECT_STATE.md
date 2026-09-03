@@ -1996,6 +1996,33 @@ Validation:
 Commit:
 - `54e1697 test: harden execution startup cancellation retry`
 
+### Sprint 8.37 - Plan execution cancellation state hardening
+
+Scope:
+- Harden cancellation state coverage for `PlanExecutor.execute()`.
+- Verify cancellation propagates to the caller.
+- Verify the plan transitions to `CANCELLED`.
+- Verify the active step does not remain `RUNNING`.
+- Verify remaining pending steps transition to `SKIPPED`.
+- Preserve existing bulkhead cleanup behavior under cancellation.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation state regression coverage in:
+  - `tests/test_plan_executor.py`
+- Fixed an existing Ruff `SIM117` lint issue in:
+  - `tests/test_wake_command_transition_hotfix.py`
+
+Validation:
+- Full regression: 1059 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commits:
+- `e839b2d test: harden plan cancellation step state`
+- `3d0a26d test: fix wake transition lint`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
