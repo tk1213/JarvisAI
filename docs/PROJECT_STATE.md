@@ -2023,6 +2023,30 @@ Commits:
 - `e839b2d test: harden plan cancellation step state`
 - `3d0a26d test: fix wake transition lint`
 
+### Sprint 8.38 - Database cancellation lifecycle hardening
+
+Scope:
+- Harden DatabaseManager lifecycle cancellation coverage.
+- Verify cancelled database startup does not mark the manager as started.
+- Verify database startup remains retryable after cancellation.
+- Verify successful retry transitions the manager to started state.
+- Verify cancellation during database shutdown propagates to the caller.
+- Verify cancelled engine disposal preserves started state until shutdown completes successfully.
+
+Implementation:
+- No production code changes were required.
+- Added database lifecycle cancellation regression coverage in:
+  - `tests/test_database_manager.py`
+
+Validation:
+- Full regression: 1061 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `2a50130 test: harden database cancellation lifecycle`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
