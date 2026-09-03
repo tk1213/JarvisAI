@@ -222,3 +222,56 @@ async def test_cancelling_waiting_startup_does_not_cancel_active_startup() -> No
 
     assert service.started is True
     assert repository.startup_calls == 1
+
+@pytest.mark.asyncio
+async def test_cancelled_startup_releases_lock_and_allows_successful_retry() -> None:
+    entered = asyncio.Event()
+    allow_retry = asyncio.Event()
+
+    class CancelThenSucceedRepository(FakeRepository):
+        async def startup(self) -> None:
+            self.startup_calls += 1
+
+            if self.startup_calls == 1:
+                entered.set()
+                await asyncio.Future()
+
+            await allow_retry.wait()
+
+    repository = CancelThenSucceedRepository()
+
+    service = ExecutionPersistenceService(
+        repository  # type: ignore[arg-type]
+    )
+
+    first = asyncio.create_task(
+        service.startup()
+    )
+
+    await entered.wait()
+
+    first.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await first
+
+    assert service.started is False
+    assert repository.startup_calls == 1
+
+    second = asyncio.create_task(
+        service.startup()
+    )
+
+    while repository.startup_calls < 2:
+        await asyncio.sleep(0)
+
+    assert second.done() is False
+
+    allow_retry.set()
+
+    await second
+
+    assert service.started is True
+    assert repository.startup_calls == 2
