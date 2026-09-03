@@ -2070,6 +2070,31 @@ Validation:
 Commit:
 - `5ca071f test: harden session cancellation state`
 
+### Sprint 8.40 - Long-term memory audit cancellation outcome hardening
+
+Scope:
+- Harden long-term memory audit cancellation outcome coverage.
+- Verify audit cancellation after a completed memory update propagates to the caller.
+- Verify the completed memory update remains committed after audit cancellation.
+- Verify audit cancellation after a completed memory delete propagates to the caller.
+- Verify the completed memory delete remains committed after audit cancellation.
+- Verify cancellation is not recorded as an ordinary audit failure.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation regression coverage in:
+  - `tests/test_memory_service_audit.py`
+
+Validation:
+- Focused memory audit suite: 8 passed
+- Full regression: 1065 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `be7515a test: harden memory audit cancellation outcomes`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
