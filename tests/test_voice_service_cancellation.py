@@ -157,3 +157,67 @@ async def test_run_continuous_propagates_cancellation_during_idle_delay() -> Non
         session.set_state.await_args_list[-1].args[0]
         == SessionState.IDLE
     )
+
+@pytest.mark.asyncio
+async def test_run_continuous_cancellation_during_reply_restores_idle_state() -> None:
+    entered_tts = asyncio.Event()
+
+    stt = Mock()
+    stt.listen = AsyncMock(
+        return_value="hello"
+    )
+
+    conversation = Mock()
+    conversation.ask = AsyncMock(
+        return_value="reply"
+    )
+
+    tts = Mock()
+
+    async def blocked_speak(
+        *,
+        text: str,
+    ) -> None:
+        del text
+
+        entered_tts.set()
+        await asyncio.Future()
+
+    tts.speak = AsyncMock(
+        side_effect=blocked_speak
+    )
+
+    session = Mock()
+    session.set_state = AsyncMock()
+
+    service = VoiceService(
+        stt=stt,
+        conversation=conversation,
+        tts=tts,
+        session=session,
+    )
+
+    task = asyncio.create_task(
+        service.run_continuous(
+            language="th",
+            idle_delay=0.0,
+        )
+    )
+
+    await entered_tts.wait()
+
+    assert service.continuous_running is True
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert service.continuous_running is False
+
+    assert (
+        session.set_state.await_args_list[-1].args[0]
+        == SessionState.IDLE
+    )    
