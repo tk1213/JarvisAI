@@ -1930,6 +1930,27 @@ Validation:
 Commit:
 - `5395bf7 test: harden wake transition cancellation diagnostics`
 
+### Sprint 8.34 — Wake wait cancellation cleanup hardening
+
+Scope:
+- Harden caller-cancellation coverage for `WakeActivationBoundary.wait()`.
+- Verify wake-worker cancellation cleanup completes before cancellation propagates.
+- Verify active wake state is cleared after cancellation.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation cleanup regression coverage in:
+  - `tests/test_wake_activation_boundary.py`
+
+Validation:
+- Full regression: 1056 passed
+- Ruff: PASS
+- Compileall: PASS
+- git show --check: PASS
+
+Commit:
+- `ccd1600 test: harden wake wait cancellation cleanup`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
