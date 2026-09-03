@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from jarvis.conversation.turn import (
@@ -116,3 +118,77 @@ def test_turn_source_values_are_stable() -> None:
     assert ConversationTurnSource.NATIVE_TOOL.value == "native_tool"
     assert ConversationTurnSource.CAPABILITY.value == "capability"
     assert ConversationTurnSource.FALLBACK_AI.value == "fallback_ai"
+
+@pytest.mark.asyncio
+async def test_turn_cancellation_clears_active_source() -> None:
+    lifecycle = ConversationTurnLifecycle()
+
+    started = asyncio.Event()
+
+    async def handler() -> str:
+        started.set()
+        await asyncio.Future()
+        return "never"
+
+    task = asyncio.create_task(
+        lifecycle.run(
+            user_text="cancel me",
+            source=ConversationTurnSource.PLANNER,
+            handler=handler,
+        )
+    )
+
+    await started.wait()
+
+    assert (
+        lifecycle.active_source
+        is ConversationTurnSource.PLANNER
+    )
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert lifecycle.active_source is None
+
+@pytest.mark.asyncio
+async def test_turn_cancellation_does_not_overwrite_last_result() -> None:
+    lifecycle = ConversationTurnLifecycle()
+
+    async def completed_handler() -> str:
+        return "done"
+
+    previous = await lifecycle.run(
+        user_text="first",
+        source=ConversationTurnSource.FALLBACK_AI,
+        handler=completed_handler,
+    )
+
+    started = asyncio.Event()
+
+    async def blocked_handler() -> str:
+        started.set()
+        await asyncio.Future()
+        return "never"
+
+    task = asyncio.create_task(
+        lifecycle.run(
+            user_text="second",
+            source=ConversationTurnSource.PLANNER,
+            handler=blocked_handler,
+        )
+    )
+
+    await started.wait()
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await task
+
+    assert lifecycle.last_result is previous
+    assert lifecycle.active_source is None

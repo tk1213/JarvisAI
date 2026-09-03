@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -151,6 +152,11 @@ class ConversationTurnLifecycle:
 
         try:
             reply = await handler()
+
+        except asyncio.CancelledError:
+            self._active_source = None
+            raise
+
         except Exception as exc:
             failure = self._failure_classifier.classify(
                 exc
