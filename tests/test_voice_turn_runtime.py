@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -112,3 +113,58 @@ async def test_whitespace_is_normalized() -> None:
     tts.speak.assert_awaited_once_with(
         "พร้อมใช้งาน"
     )
+
+@pytest.mark.asyncio
+async def test_voice_turn_propagates_cancellation_from_stt() -> None:
+    stt = Mock()
+    stt.listen_vad = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    conversation = Mock()
+    conversation.ask = AsyncMock()
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    service = VoiceTurnRuntime(
+        stt=stt,
+        conversation=conversation,
+        tts=tts,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await service.run()
+
+    conversation.ask.assert_not_awaited()
+    tts.speak.assert_not_awaited()
+
+@pytest.mark.asyncio
+async def test_voice_turn_propagates_cancellation_from_conversation() -> None:
+    stt = Mock()
+    stt.listen_vad = AsyncMock(
+        return_value="hello"
+    )
+
+    conversation = Mock()
+    conversation.ask = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    service = VoiceTurnRuntime(
+        stt=stt,
+        conversation=conversation,
+        tts=tts,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await service.run()
+
+    tts.speak.assert_not_awaited()
