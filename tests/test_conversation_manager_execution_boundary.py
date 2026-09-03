@@ -7,6 +7,7 @@ import pytest
 
 from jarvis.conversation.reliability import ConversationFailureKind
 from jarvis.conversation.turn import ConversationTurnStatus
+from jarvis.core.event_bus import event_bus
 from jarvis.services.conversation_manager import ConversationManager
 
 
@@ -128,3 +129,117 @@ def test_default_constructor_is_backward_compatible() -> None:
     )
 
     assert manager.conversation_timeout_seconds == 60.0
+
+@pytest.mark.asyncio
+async def test_memory_persistence_cancellation_does_not_complete_turn(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = build_manager()
+
+    manager._memory.save_turn = AsyncMock(  # type: ignore[attr-defined]
+        side_effect=asyncio.CancelledError()
+    )
+
+    published: list[str] = []
+
+    async def capture_publish(event: object) -> None:
+        name = getattr(event, "name", None)
+
+        if isinstance(name, str):
+            published.append(name)
+
+    monkeypatch.setattr(
+        event_bus,
+        "publish",
+        capture_publish,
+    )
+
+    async def persist_reply(
+        text: str,
+    ) -> str:
+        await manager._save_conversation(
+            user_text=text,
+            reply="generated reply",
+            tool="ai",
+        )
+
+        return "generated reply"
+
+    manager._ask_legacy = persist_reply  # type: ignore[method-assign]
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await manager.ask(
+            "cancel during persistence"
+        )
+
+    assert manager.last_turn is None
+    assert manager._turn_lifecycle.active_source is None
+    assert "conversation.response" not in published
+
+@pytest.mark.asyncio
+async def test_caller_cancellation_during_memory_persistence_clears_turn_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manager = build_manager()
+
+    persistence_started = asyncio.Event()
+    release_persistence = asyncio.Event()
+
+    async def blocking_save_turn(
+        *,
+        user_content: str,
+        assistant_content: str,
+    ) -> None:
+        del user_content, assistant_content
+        persistence_started.set()
+        await release_persistence.wait()
+
+    manager._memory.save_turn = blocking_save_turn  # type: ignore[attr-defined]
+
+    published: list[str] = []
+
+    async def capture_publish(event: object) -> None:
+        name = getattr(event, "name", None)
+
+        if isinstance(name, str):
+            published.append(name)
+
+    monkeypatch.setattr(
+        event_bus,
+        "publish",
+        capture_publish,
+    )
+
+    async def persist_reply(
+        text: str,
+    ) -> str:
+        await manager._save_conversation(
+            user_text=text,
+            reply="generated reply",
+            tool="ai",
+        )
+
+        return "generated reply"
+
+    manager._ask_legacy = persist_reply  # type: ignore[method-assign]
+
+    task = asyncio.create_task(
+        manager.ask(
+            "cancel while saving"
+        )
+    )
+
+    await persistence_started.wait()
+
+    task.cancel()
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await task
+
+    assert manager.last_turn is None
+    assert manager._turn_lifecycle.active_source is None
+    assert "conversation.response" not in published
