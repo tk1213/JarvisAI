@@ -1951,6 +1951,28 @@ Validation:
 Commit:
 - `ccd1600 test: harden wake wait cancellation cleanup`
 
+### Sprint 8.35 — Continuous voice cancellation state hardening
+
+Scope:
+- Harden cancellation coverage for `VoiceService.run_continuous()`.
+- Verify cancellation during reply/TTS propagates to the caller.
+- Verify continuous voice runtime state is cleared after cancellation.
+- Verify session state returns to `IDLE` after cancellation.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation state regression coverage in:
+  - `tests/test_voice_service_cancellation.py`
+
+Validation:
+- Full regression: 1057 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `<hash> test: harden continuous voice cancellation state`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
