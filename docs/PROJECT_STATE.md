@@ -1885,6 +1885,28 @@ Validation:
 Commit:
 - `f372c78 test: harden voice dialogue cancellation coverage`
 
+### Sprint 8.32 — Wake turn cancellation diagnostics hardening
+
+Scope:
+- Harden cancellation regression coverage for `WakeActivatedTurnRuntime`.
+- Verify cancellation propagates from the conversation stage.
+- Verify cancellation propagates from the TTS reply stage.
+- Preserve the active stage as cancellation diagnostic state.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation regression coverage in:
+  - `tests/test_wake_full_turn.py`
+
+Validation:
+- Full regression: 1052 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `f9f1b87 test: harden wake turn cancellation diagnostics`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
