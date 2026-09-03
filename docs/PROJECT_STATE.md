@@ -1825,6 +1825,23 @@ Validated:
 Implementation commit:
 - 5cc0f54 fix: clear conversation turn state on cancellation
 
+Sprint 8.29 — Wake activation cancellation cleanup hardening
+
+Validated:
+- cancel_active_wait shields wake-task cleanup from caller cancellation
+- caller cancellation propagates after wake cleanup completes
+- wake task cancellation remains the normal internal stop path
+- active wake boundary state is cleared after cancellation
+- wake activation boundary tests: 9 passed
+- full regression: 1046 passed
+- Ruff: PASS
+- compileall: PASS
+- git diff --check: PASS
+
+Implementation and coverage commit:
+
+31b9cb5
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
