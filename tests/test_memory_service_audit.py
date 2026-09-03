@@ -315,3 +315,87 @@ async def test_audit_failure_does_not_fail_completed_memory_delete() -> None:
     assert deleted is True
     assert repository.memory is None
     assert service.last_audit_error == "audit failed"
+
+@pytest.mark.asyncio
+async def test_audit_cancellation_propagates_after_memory_update() -> None:
+    class CancellingAudit:
+        async def record(
+            self,
+            **kwargs: object,
+        ) -> None:
+            del kwargs
+            raise asyncio.CancelledError
+
+    now = datetime.now(UTC)
+
+    repository = StubRepository()
+    repository.memory = Memory(
+        id=1,
+        category=MemoryCategory.PERSONAL,
+        key="user_name",
+        value="Old",
+        importance=MemoryImportance.NORMAL,
+        source="user",
+        created_at=now,
+        updated_at=now,
+    )
+
+    service = MemoryService(
+        repository,  # type: ignore[arg-type]
+        audit=CancellingAudit(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await service.remember(
+            category=MemoryCategory.PERSONAL,
+            key="user_name",
+            value="TK",
+            importance=MemoryImportance.HIGH,
+            source="user",
+        )
+
+    assert repository.memory is not None
+    assert repository.memory.value == "TK"
+    assert repository.memory.importance is MemoryImportance.HIGH
+    assert service.last_audit_error is None
+
+@pytest.mark.asyncio
+async def test_audit_cancellation_propagates_after_memory_delete() -> None:
+    class CancellingAudit:
+        async def record(
+            self,
+            **kwargs: object,
+        ) -> None:
+            del kwargs
+            raise asyncio.CancelledError
+
+    now = datetime.now(UTC)
+
+    repository = StubRepository()
+    repository.memory = Memory(
+        id=1,
+        category=MemoryCategory.PERSONAL,
+        key="user_name",
+        value="TK",
+        importance=MemoryImportance.HIGH,
+        source="user",
+        created_at=now,
+        updated_at=now,
+    )
+
+    service = MemoryService(
+        repository,  # type: ignore[arg-type]
+        audit=CancellingAudit(),  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await service.forget(
+            "user_name"
+        )
+
+    assert repository.memory is None
+    assert service.last_audit_error is None
