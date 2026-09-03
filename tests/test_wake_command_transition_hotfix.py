@@ -140,14 +140,16 @@ async def test_transition_preserves_settle_stage_on_cancellation() -> None:
         post_ack_settle_seconds=0.8,
     )
 
-    with patch(
-        "jarvis.wake.command_transition.asyncio.sleep",
-        side_effect=asyncio.CancelledError(),
-    ):
-        with pytest.raises(
+    with (
+        patch(
+            "jarvis.wake.command_transition.asyncio.sleep",
+            side_effect=asyncio.CancelledError(),
+        ),
+        pytest.raises(
             asyncio.CancelledError
-        ):
-            await transition.run()
+        ),
+    ):
+        await transition.run()
 
     assert transition.stage is (
         WakeCommandTransitionStage.POST_ACK_SETTLE
