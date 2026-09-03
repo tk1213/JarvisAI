@@ -1907,6 +1907,29 @@ Validation:
 Commit:
 - `f9f1b87 test: harden wake turn cancellation diagnostics`
 
+### Sprint 8.33 — Wake transition cancellation diagnostics hardening
+
+Scope:
+- Harden cancellation diagnostics coverage for `WakeCommandTransition`.
+- Verify cancellation propagates from the acknowledgement stage.
+- Verify cancellation propagates from the post-ack settle stage.
+- Verify cancellation propagates from the command-listen stage.
+- Preserve the active transition stage as cancellation diagnostic state.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation regression coverage in:
+  - `tests/test_wake_command_transition_hotfix.py`
+
+Validation:
+- Full regression: 1055 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `5395bf7 test: harden wake transition cancellation diagnostics`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
