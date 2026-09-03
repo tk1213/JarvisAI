@@ -1971,7 +1971,30 @@ Validation:
 - git diff --check: PASS
 
 Commit:
-- `<hash> test: harden continuous voice cancellation state`
+- `4fa5b1d test: harden continuous voice cancellation state`
+
+### Sprint 8.36 — Execution persistence startup cancellation retry hardening
+
+Scope:
+- Harden cancellation retry coverage for `ExecutionPersistenceService.startup()`.
+- Verify cancellation during active repository startup leaves the service not started.
+- Verify cancellation releases the startup lock.
+- Verify a subsequent startup attempt can acquire the lock and complete successfully.
+- Preserve the existing single-start initialization contract.
+
+Implementation:
+- No production code changes were required.
+- Added cancellation retry regression coverage in:
+  - `tests/test_execution_persistence_lazy_start.py`
+
+Validation:
+- Full regression: 1058 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `54e1697 test: harden execution startup cancellation retry`
 
 The next Sprint 8 scope has not yet been fixed.
 
