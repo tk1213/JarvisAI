@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -384,3 +385,55 @@ async def test_voice_dialogue_allows_status_while_confirmation_is_pending() -> N
     assert result.follow_ups_used == 2
     assert result.pending_smart_home is False
     assert result.completed is True
+
+@pytest.mark.asyncio
+async def test_dialogue_propagates_cancellation_from_follow_up() -> None:
+    voice_turn = Mock()
+    voice_turn.run = AsyncMock(
+        side_effect=(
+            completed(
+                "first",
+                "pending",
+            ),
+            asyncio.CancelledError(),
+        )
+    )
+
+    conversation = Mock()
+    conversation.has_pending_smart_home = True
+
+    runtime = VoiceDialogueRuntime(
+        voice_turn=voice_turn,
+        conversation=conversation,
+        max_follow_ups=2,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await runtime.run()
+
+    assert voice_turn.run.await_count == 2
+
+@pytest.mark.asyncio
+async def test_dialogue_propagates_cancellation_from_first_turn() -> None:
+    voice_turn = Mock()
+    voice_turn.run = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    conversation = Mock()
+    conversation.has_pending_smart_home = True
+
+    runtime = VoiceDialogueRuntime(
+        voice_turn=voice_turn,
+        conversation=conversation,
+        max_follow_ups=2,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError
+    ):
+        await runtime.run()
+
+    voice_turn.run.assert_awaited_once()
