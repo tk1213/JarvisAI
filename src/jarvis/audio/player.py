@@ -103,15 +103,18 @@ class AudioPlayer:
             dtype="float32",
         )
 
-        if on_playback_start is not None:
-            on_playback_start()
-
         sd.play(
             data=data,
             samplerate=target_rate,
             device=self.audio.output_device,
-            blocking=blocking,
+            blocking=False,
         )
+
+        if on_playback_start is not None:
+            on_playback_start()
+
+        if blocking:
+            sd.wait()
 
     def stop(
         self,
