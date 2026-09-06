@@ -13,6 +13,8 @@ from jarvis.audio.recorder import AudioRecorder
 
 
 class FakeCallbackStream:
+    exit_count = 0
+
     def __init__(
         self,
         *,
@@ -41,8 +43,8 @@ class FakeCallbackStream:
         self,
         *args,
     ):
+        type(self).exit_count += 1
         return False
-
 
 class FakeSoundDevice:
     stream_batches: ClassVar[
@@ -112,6 +114,8 @@ def frame(
 def build_recorder(
     batches,
 ) -> AudioRecorder:
+    FakeCallbackStream.exit_count = 0
+
     FakeSoundDevice.stream_batches = [
         tuple(
             batch
@@ -129,7 +133,6 @@ def build_recorder(
         manager,
         sounddevice_module=fake,
     )
-
 
 def test_callback_calibration_uses_audio_frames() -> None:
     recorder = build_recorder(
@@ -240,6 +243,7 @@ def test_callback_vad_can_be_cancelled_cooperatively() -> None:
 
     assert worker.is_alive() is False
     assert result_holder == [None]
+    assert FakeCallbackStream.exit_count == 1
 
 def test_callback_calibration_can_be_cancelled_cooperatively() -> None:
     recorder = build_recorder(
@@ -274,3 +278,4 @@ def test_callback_calibration_can_be_cancelled_cooperatively() -> None:
 
     assert worker.is_alive() is False
     assert result_holder == [None]
+    assert FakeCallbackStream.exit_count == 1
