@@ -2383,6 +2383,29 @@ Validation:
 Commit:
 - `8c6575f test: harden audio stream lifecycle contract`
 
+### Sprint 8.52 - AudioStream shared AudioManager contract
+
+Scope:
+- Align AudioStream device ownership with the shared audio-device architecture.
+- Prevent AudioStream from silently creating an independent AudioManager when a shared manager is available.
+- Preserve backward compatibility for standalone AudioStream construction.
+
+Implementation:
+- Added optional AudioManager dependency injection to AudioStream.
+- AudioStream now uses the injected manager when provided.
+- Existing `AudioStream()` construction remains supported and creates its own AudioManager as before.
+- Added regression coverage confirming the injected AudioManager is preserved and its selected input sample rate is used.
+
+Validation:
+- AudioStream focused suite: 4 passed
+- Full regression: 1083 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `1eace31 fix: support shared audio manager in audio stream`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
