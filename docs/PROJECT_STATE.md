@@ -2121,6 +2121,31 @@ Validation:
 Commit:
 - `e92a092 test: harden conversation persistence cancellation`
 
+### Sprint 8.42 - Health diagnostics cancellation boundary hardening
+
+Scope:
+- Harden HealthService diagnostics cancellation boundary coverage.
+- Verify cancellation originating from the database health probe propagates to the caller.
+- Verify external caller cancellation while the database health probe is in progress propagates to the caller.
+- Verify cancellation is not converted into an unavailable database health result.
+- Preserve the existing isolation behavior for ordinary database health-check failures.
+
+Implementation:
+- No production code changes were required.
+- Existing `HealthService.diagnostics()` cancellation propagation was already correct.
+- Added health diagnostics cancellation regression coverage in:
+  - `tests/test_health_service_resilience.py`
+
+Validation:
+- Focused health service resilience suite: PASS
+- Full regression: 1069 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `dc35e21 test: harden health diagnostics cancellation`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
