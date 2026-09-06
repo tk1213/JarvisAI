@@ -18,7 +18,7 @@ class AudioStream:
         self.sample_rate = (
             sample_rate
             if sample_rate is not None
-            else self.audio.sample_rate
+            else self.audio.input_info.default_sample_rate
         )
 
         self.frame_duration_ms = frame_duration_ms
