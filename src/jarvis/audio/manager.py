@@ -83,16 +83,20 @@ class AudioManager:
         )
 
     def refresh(self) -> AudioManagerSnapshot:
-        self._catalog = self._build_catalog()
+        catalog = self._build_catalog()
 
-        self._input = self._catalog.get(
+        input_device = catalog.get(
             self._input.index,
             kind=AudioDeviceKind.INPUT,
         )
-        self._output = self._catalog.get(
+        output_device = catalog.get(
             self._output.index,
             kind=AudioDeviceKind.OUTPUT,
         )
+
+        self._catalog = catalog
+        self._input = input_device
+        self._output = output_device
 
         return self.snapshot
 
