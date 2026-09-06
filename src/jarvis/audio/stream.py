@@ -12,8 +12,14 @@ class AudioStream:
         self,
         sample_rate: int | None = None,
         frame_duration_ms: int = 20,
+        *,
+        audio: AudioManager | None = None,
     ) -> None:
-        self.audio = AudioManager()
+        self.audio = (
+            audio
+            if audio is not None
+            else AudioManager()
+        )
 
         self.sample_rate = (
             sample_rate

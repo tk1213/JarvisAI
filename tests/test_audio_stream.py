@@ -121,3 +121,16 @@ def test_frames_skips_overflow_and_yields_next_valid_frame() -> None:
         frames.close()
 
     assert OverflowThenDataStream.exit_count == 1
+
+def test_stream_uses_injected_audio_manager() -> None:
+    audio = MagicMock()
+    audio.input_info.default_sample_rate = 48000
+    audio.input_device = 12
+
+    stream = AudioStream(
+        audio=audio,
+    )
+
+    assert stream.audio is audio
+    assert stream.sample_rate == 48000
+    assert stream.frame_samples == 960
