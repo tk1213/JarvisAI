@@ -2146,6 +2146,31 @@ Validation:
 Commit:
 - `dc35e21 test: harden health diagnostics cancellation`
 
+### Sprint 8.43 - Heartbeat cancellation restartability hardening
+
+Scope:
+- Harden HeartbeatService cancellation restartability coverage.
+- Verify cancellation propagates from the heartbeat runtime.
+- Verify heartbeat running state is cleared after cancellation.
+- Verify the same HeartbeatService instance can restart successfully after cancellation.
+- Verify a restarted heartbeat can be cancelled cleanly again.
+
+Implementation:
+- No production code changes were required.
+- Existing HeartbeatService cancellation cleanup and restart behavior were already correct.
+- Added heartbeat cancellation restartability regression coverage in:
+  - `tests/test_heartbeat_service.py`
+
+Validation:
+- Focused heartbeat service suite: 6 passed
+- Full regression: 1070 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `6ae3d6f test: harden heartbeat cancellation restartability`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
