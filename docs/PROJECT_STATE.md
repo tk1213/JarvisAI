@@ -2315,6 +2315,28 @@ Validation:
 Commit:
 - `b7a1096 test: harden audio playback control contract`
 
+### Sprint 8.49 - AudioManager refresh atomicity hardening
+
+Scope:
+- Harden AudioManager refresh behavior against partial state updates.
+- Preserve the previous device-manager state when device refresh fails.
+
+Implementation:
+- Changed `AudioManager.refresh()` to build and validate the new device state before committing it.
+- Input and output devices are resolved against the new catalog using temporary state.
+- The catalog, input device, and output device are committed only after all validation succeeds.
+- Added regression coverage proving that a failed refresh preserves the previous catalog and selected devices.
+
+Validation:
+- AudioManager focused suite: 5 passed
+- Full regression: 1079 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `f10a22d fix: make audio manager refresh atomic`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
