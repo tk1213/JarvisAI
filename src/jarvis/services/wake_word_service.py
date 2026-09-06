@@ -232,7 +232,7 @@ class WakeWordService:
         if self._closed:
             return
 
+        self._closed = True
+
         self._features.close()
         self._wake_word.close()
-
-        self._closed = True

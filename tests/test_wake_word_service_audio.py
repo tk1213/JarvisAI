@@ -209,3 +209,77 @@ async def test_close_during_wait_stops_listener_and_closes_stream() -> None:
     assert service.closed is True
     features.close.assert_called_once()
     wake.close.assert_called_once()
+
+def test_close_marks_service_closed_when_wake_cleanup_fails() -> None:
+    audio = Mock(
+        spec=AudioManager
+    )
+
+    with (
+        patch(
+            "jarvis.services.wake_word_service.OpenWakeWordFeatures"
+        ) as features_type,
+        patch(
+            "jarvis.services.wake_word_service.OpenWakeWord"
+        ) as wake_type,
+    ):
+        features = features_type.from_builtin.return_value
+        wake = wake_type.from_builtin.return_value
+
+        features.close = Mock()
+        wake.close = Mock(
+            side_effect=RuntimeError(
+                "wake cleanup failed"
+            )
+        )
+
+        service = WakeWordService(
+            audio=audio,
+        )
+
+        with pytest.raises(
+            RuntimeError,
+            match="wake cleanup failed",
+        ):
+            service.close()
+
+    features.close.assert_called_once()
+    wake.close.assert_called_once()
+    assert service.closed is True
+
+def test_close_marks_service_closed_when_feature_cleanup_fails() -> None:
+    audio = Mock(
+        spec=AudioManager
+    )
+
+    with (
+        patch(
+            "jarvis.services.wake_word_service.OpenWakeWordFeatures"
+        ) as features_type,
+        patch(
+            "jarvis.services.wake_word_service.OpenWakeWord"
+        ) as wake_type,
+    ):
+        features = features_type.from_builtin.return_value
+        wake = wake_type.from_builtin.return_value
+
+        features.close = Mock(
+            side_effect=RuntimeError(
+                "feature cleanup failed"
+            )
+        )
+        wake.close = Mock()
+
+        service = WakeWordService(
+            audio=audio,
+        )
+
+        with pytest.raises(
+            RuntimeError,
+            match="feature cleanup failed",
+        ):
+            service.close()
+
+    features.close.assert_called_once()
+    wake.close.assert_not_called()
+    assert service.closed is True
