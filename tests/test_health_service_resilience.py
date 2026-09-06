@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import ClassVar
 
 import pytest
@@ -514,6 +515,98 @@ async def test_diagnostics_reports_degraded_resilience_runtime() -> None:
                 },
             },
         }
+
+    finally:
+        container.clear()
+
+        for name, registered_service in existing.items():
+            container.register(
+                name,
+                registered_service,
+            )
+
+@pytest.mark.asyncio
+async def test_database_health_cancellation_propagates() -> None:
+    existing = dict(
+        container._services  # type: ignore[attr-defined]
+    )
+
+    class CancellingDatabase:
+        async def health_check(
+            self,
+        ) -> bool:
+            raise asyncio.CancelledError
+
+    try:
+        container.clear()
+
+        container.register(
+            "database",
+            CancellingDatabase(),
+        )
+
+        service = HealthService()
+
+        with pytest.raises(
+            asyncio.CancelledError,
+        ):
+            await service.diagnostics()
+
+    finally:
+        container.clear()
+
+        for name, registered_service in existing.items():
+            container.register(
+                name,
+                registered_service,
+            )
+
+
+@pytest.mark.asyncio
+async def test_caller_cancellation_during_database_health_check_propagates() -> None:
+    existing = dict(
+        container._services  # type: ignore[attr-defined]
+    )
+
+    health_check_started = asyncio.Event()
+    health_check_cancelled = asyncio.Event()
+
+    class BlockingDatabase:
+        async def health_check(
+            self,
+        ) -> bool:
+            health_check_started.set()
+
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                health_check_cancelled.set()
+                raise
+
+    try:
+        container.clear()
+
+        container.register(
+            "database",
+            BlockingDatabase(),
+        )
+
+        service = HealthService()
+
+        task = asyncio.create_task(
+            service.diagnostics()
+        )
+
+        await health_check_started.wait()
+
+        task.cancel()
+
+        with pytest.raises(
+            asyncio.CancelledError,
+        ):
+            await task
+
+        assert health_check_cancelled.is_set()
 
     finally:
         container.clear()
