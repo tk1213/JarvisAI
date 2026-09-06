@@ -2196,6 +2196,30 @@ Validation:
 Commit:
 - `0b8d453 fix: harden wake word close failure state`
 
+### Sprint 8.45 - SmartHomeService cancellation state hardening
+
+Scope:
+- Harden SmartHomeService cancellation-state contract.
+- Verify cancellation propagates through Smart Home lifecycle boundaries.
+- Ensure service connection state remains consistent after cancellation.
+
+Implementation:
+- No production changes were required.
+- Existing SmartHomeService behavior already preserves the intended cancellation semantics.
+- Added regression coverage for:
+  - connect cancellation propagating while the service remains disconnected
+  - disconnect cancellation propagating while the service transitions to disconnected state
+
+Validation:
+- Smart Home focused suite: 6 passed
+- Full regression: 1074 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `59d632f test: harden smart home cancellation state`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
