@@ -2171,6 +2171,31 @@ Validation:
 Commit:
 - `6ae3d6f test: harden heartbeat cancellation restartability`
 
+### Sprint 8.44 - WakeWordService close failure-state hardening
+
+Scope:
+- Harden WakeWordService terminal close lifecycle semantics.
+- Ensure the service is marked closed once close begins, even when resource cleanup fails.
+- Preserve cleanup exceptions for callers instead of swallowing them.
+- Prevent partially closed wake-word resources from leaving the service appearing usable.
+
+Implementation:
+- Updated `WakeWordService.close()` to commit the terminal closed state before resource cleanup begins.
+- Existing cleanup exceptions continue to propagate to the caller.
+- Added regression coverage for:
+  - wake-word model cleanup failure after feature cleanup succeeds
+  - feature cleanup failure at the first cleanup boundary
+
+Validation:
+- Wake-word service focused suite: 6 passed
+- Full regression: 1072 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `0b8d453 fix: harden wake word close failure state`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
