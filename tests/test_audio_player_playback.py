@@ -144,3 +144,80 @@ def test_blocking_play_reports_start_before_waiting_for_completion(
         "start",
         "wait",
     ]
+
+def test_non_blocking_play_does_not_wait_for_completion(
+    tmp_path: Path,
+) -> None:
+    audio_file = tmp_path / "reply.wav"
+    audio_file.touch()
+
+    audio = Mock(
+        spec=AudioManager
+    )
+    audio.output_device = 7
+
+    player = AudioPlayer(
+        audio=audio
+    )
+
+    samples = np.zeros(
+        160,
+        dtype=np.float32,
+    )
+
+    output_info = {
+        "name": "Fake Output",
+        "default_samplerate": 16000,
+        "max_output_channels": 2,
+    }
+
+    with (
+        patch(
+            "jarvis.audio.player.sf.read",
+            return_value=(
+                samples,
+                16000,
+            ),
+        ),
+        patch(
+            "jarvis.audio.player.sd.query_devices",
+            return_value=output_info,
+        ),
+        patch(
+            "jarvis.audio.player.sd.check_output_settings",
+        ),
+        patch(
+            "jarvis.audio.player.sd.play",
+        ) as play,
+        patch(
+            "jarvis.audio.player.sd.wait",
+        ) as wait,
+    ):
+        player.play(
+            audio_file,
+            blocking=False,
+        )
+
+    play.assert_called_once()
+
+    assert (
+        play.call_args.kwargs["blocking"]
+        is False
+    )
+
+    wait.assert_not_called()
+
+
+def test_stop_delegates_to_sounddevice() -> None:
+    player = AudioPlayer(
+        audio=Mock(
+            spec=AudioManager
+        )
+    )
+
+    with patch(
+        "jarvis.audio.player.sd.stop"
+    ) as stop:
+        player.stop()
+
+    stop.assert_called_once_with()
