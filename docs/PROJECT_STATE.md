@@ -2406,6 +2406,37 @@ Validation:
 Commit:
 - `1eace31 fix: support shared audio manager in audio stream`
 
+### Sprint 8.53 - Audio device discovery CLI
+
+Scope:
+- Expose the shared AudioManager device catalog through the public CLI.
+- Improve real-world audio troubleshooting by making available input and output devices directly discoverable.
+- Keep this sprint read-only; persistent audio-device selection remains out of scope.
+
+Implementation:
+- Added the `jarvis audio` CLI command.
+- Added `audio_devices()` using the AudioManager registered by the normal JarvisApplication composition.
+- The command starts the application without background tasks, lists available input and output devices, and reports the currently selected devices.
+- Application shutdown remains guaranteed through the existing shutdown boundary.
+- Added regression coverage for device listing, CLI parser support, and CLI dispatch.
+- Persistent input/output device selection was intentionally deferred to a later sprint.
+
+Live validation:
+- `jarvis audio` successfully enumerated the host audio devices.
+- Selected input: `[12] Microphone (Realtek HD Audio Mic input)`.
+- Selected output: `[9] Speakers (Realtek(R) Audio)`.
+- Application startup and shutdown completed successfully during live device discovery.
+
+Validation:
+- Audio CLI focused suite: 3 passed
+- Full regression: 1086 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `dc1be40 feat: add audio device discovery command`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
