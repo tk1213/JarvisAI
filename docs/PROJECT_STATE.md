@@ -2291,6 +2291,30 @@ Validation:
 Commit:
 - `ac49eec fix: harden audio playback start reporting`
 
+### Sprint 8.48 - AudioPlayer playback-control contract hardening
+
+Scope:
+- Harden AudioPlayer playback-control behavior with focused regression coverage.
+- Verify non-blocking playback does not wait for completion.
+- Verify AudioPlayer stop delegates directly to sounddevice.
+
+Implementation:
+- Added regression coverage for `blocking=False`.
+- Verified playback is dispatched non-blocking and `sd.wait()` is not called.
+- Added regression coverage for `AudioPlayer.stop()`.
+- Verified stop delegates to `sd.stop()` exactly once.
+- No production changes were required.
+
+Validation:
+- AudioPlayer playback focused suite: 4 passed
+- Full regression: 1078 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `b7a1096 test: harden audio playback control contract`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
