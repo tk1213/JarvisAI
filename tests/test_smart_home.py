@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -66,6 +67,50 @@ async def test_smart_home_service_marks_disconnected_after_disconnect() -> None:
 
     await service.connect()
     await service.disconnect()
+
+    assert service.connected is False
+    adapter.disconnect.assert_awaited_once()
+
+@pytest.mark.asyncio
+async def test_smart_home_connect_cancellation_propagates_and_stays_disconnected() -> None:
+    adapter = Mock()
+    adapter.connect = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    service = SmartHomeService(
+        adapter=adapter,
+    )
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await service.connect()
+
+    assert service.connected is False
+    adapter.connect.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_smart_home_disconnect_cancellation_propagates_and_marks_disconnected() -> None:
+    adapter = Mock()
+    adapter.connect = AsyncMock()
+    adapter.disconnect = AsyncMock(
+        side_effect=asyncio.CancelledError()
+    )
+
+    service = SmartHomeService(
+        adapter=adapter,
+    )
+
+    await service.connect()
+
+    assert service.connected is True
+
+    with pytest.raises(
+        asyncio.CancelledError,
+    ):
+        await service.disconnect()
 
     assert service.connected is False
     adapter.disconnect.assert_awaited_once()
