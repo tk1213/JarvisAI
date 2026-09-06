@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 
-from jarvis.main import chat, doctor, run
+from jarvis.main import audio_devices, chat, doctor, run
 from jarvis.version import __version__
 
 
@@ -31,6 +31,11 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     subparsers.add_parser(
+        "audio",
+        help="List available audio devices",
+    )
+
+    subparsers.add_parser(
         "version",
         help="Show JarvisAI version",
     )
@@ -56,6 +61,9 @@ def main() -> None:
 
             if not healthy:
                 raise SystemExit(1)
+
+        elif command == "audio":
+            asyncio.run(audio_devices())
 
         elif command == "version":
             print(f"JarvisAI {__version__}")

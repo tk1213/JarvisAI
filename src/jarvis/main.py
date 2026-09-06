@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
+from jarvis.audio.manager import AudioManager
 from jarvis.config import settings
 from jarvis.core.application import JarvisApplication
 from jarvis.core.container import container
@@ -204,6 +205,65 @@ async def chat() -> None:
     finally:
         await _shutdown_application(app)
 
+async def audio_devices() -> None:
+    print("=" * 40)
+    print("JarvisAI Audio Devices")
+    print("=" * 40)
+
+    app = JarvisApplication()
+
+    try:
+        await app.start(
+            start_background_tasks=False,
+        )
+
+        audio = container.resolve(
+            "audio",
+            AudioManager,
+        )
+
+        print()
+        print("Input Devices")
+        print("-------------")
+
+        for device in audio.input_devices():
+            print(
+                f"[{device.index}] {device.name}"
+            )
+            print(
+                f"    {device.host_api} | "
+                f"{device.default_sample_rate} Hz"
+            )
+
+        print()
+        print("Output Devices")
+        print("--------------")
+
+        for device in audio.output_devices():
+            print(
+                f"[{device.index}] {device.name}"
+            )
+            print(
+                f"    {device.host_api} | "
+                f"{device.default_sample_rate} Hz"
+            )
+
+        print()
+        print("Selected")
+        print("--------")
+        print(
+            "Input : "
+            f"[{audio.input_info.index}] "
+            f"{audio.input_info.name}"
+        )
+        print(
+            "Output: "
+            f"[{audio.output_info.index}] "
+            f"{audio.output_info.name}"
+        )
+
+    finally:
+        await _shutdown_application(app)
 
 def _doctor_status_label(
     state: HealthState,
