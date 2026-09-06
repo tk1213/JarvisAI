@@ -2220,6 +2220,52 @@ Validation:
 Commit:
 - `59d632f test: harden smart home cancellation state`
 
+### Sprint 8.46 - AudioRecorder cancellation stream cleanup hardening
+
+Scope:
+- Harden AudioRecorder cooperative cancellation resource-lifecycle coverage.
+- Verify active callback input streams are exited when recording or calibration is cancelled.
+
+Implementation:
+- No production changes required.
+- Existing AudioRecorder context-manager behavior already closes the active input stream during cooperative cancellation.
+- Extended existing cancellation regression tests to verify stream exit explicitly for:
+  - `record_until_silence()`
+  - `calibrate_noise()`
+
+Validation:
+- Audio recorder callback VAD suite: 5 passed
+- Full regression: 1074 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `d655562 test: verify recorder cancellation closes stream`
+
+### Sprint 8.46 - AudioRecorder cancellation stream cleanup hardening
+
+Scope:
+- Harden AudioRecorder cooperative cancellation resource-lifecycle coverage.
+- Verify active callback input streams are exited when recording or calibration is cancelled.
+
+Implementation:
+- No production changes required.
+- Existing AudioRecorder context-manager behavior already closes the active input stream during cooperative cancellation.
+- Extended existing cancellation regression tests to verify stream exit explicitly for:
+  - `record_until_silence()`
+  - `calibrate_noise()`
+
+Validation:
+- Audio recorder callback VAD suite: 5 passed
+- Full regression: 1074 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `d655562 test: verify recorder cancellation closes stream`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
