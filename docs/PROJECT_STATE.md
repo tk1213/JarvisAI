@@ -2337,6 +2337,28 @@ Validation:
 Commit:
 - `f10a22d fix: make audio manager refresh atomic`
 
+### Sprint 8.50 - AudioStream default sample-rate contract
+
+Scope:
+- Restore the AudioStream default sample-rate contract.
+- Ensure AudioStream uses the sample rate of the selected input device.
+
+Implementation:
+- Fixed `AudioStream` to use `AudioManager.input_info.default_sample_rate` when no explicit sample rate is provided.
+- Removed the invalid dependency on the nonexistent `AudioManager.sample_rate` attribute.
+- Added regression coverage verifying the selected input device sample rate is used.
+- Explicit `sample_rate` behavior was left unchanged.
+
+Validation:
+- AudioStream focused suite: 1 passed
+- Full regression: 1080 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `4188ebd fix: use selected input sample rate for audio stream`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
