@@ -2266,6 +2266,31 @@ Validation:
 Commit:
 - `d655562 test: verify recorder cancellation closes stream`
 
+### Sprint 8.47 - AudioPlayer playback-start contract hardening
+
+Scope:
+- Harden AudioPlayer playback-start reporting semantics.
+- Ensure playback start is reported only after playback dispatch succeeds.
+- Preserve blocking playback behavior without delaying the playback-start signal until audio completion.
+
+Implementation:
+- Changed AudioPlayer playback dispatch to start sounddevice playback non-blocking.
+- `on_playback_start` is now invoked only after `sd.play()` successfully dispatches playback.
+- Blocking callers retain existing behavior through `sd.wait()`.
+- Added AudioPlayer playback regression coverage for:
+  - failed playback dispatch must not report playback start
+  - blocking playback reports start before waiting for playback completion
+
+Validation:
+- AudioPlayer playback focused suite: 2 passed
+- Full regression: 1076 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `ac49eec fix: harden audio playback start reporting`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
