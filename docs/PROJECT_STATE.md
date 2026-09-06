@@ -2359,6 +2359,30 @@ Validation:
 Commit:
 - `4188ebd fix: use selected input sample rate for audio stream`
 
+### Sprint 8.51 - AudioStream lifecycle contract hardening
+
+Scope:
+- Harden AudioStream generator lifecycle coverage.
+- Verify microphone stream cleanup when the frame generator is closed.
+- Verify overflow frames are skipped without terminating the stream.
+
+Implementation:
+- Added regression coverage confirming `AudioStream.frames()` closes
+  `RawInputStream` when the consumer closes the generator.
+- Added regression coverage confirming overflow frames are skipped and
+  the next valid PCM frame is yielded.
+- No production changes were required.
+
+Validation:
+- AudioStream focused suite: 3 passed
+- Full regression: 1082 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `8c6575f test: harden audio stream lifecycle contract`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
