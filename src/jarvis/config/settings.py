@@ -106,6 +106,8 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------
     audio_sample_rate: int = 16000
     audio_channels: int = 1
+    audio_input_device: int | None = None
+    audio_output_device: int | None = None
 
     @property
     def is_development(self) -> bool:

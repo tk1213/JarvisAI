@@ -206,7 +206,10 @@ class ServiceFactory:
             SessionManager,
         )
 
-        audio = AudioManager()
+        audio = AudioManager(
+            input_device=settings.audio_input_device,
+            output_device=settings.audio_output_device,
+        )
 
         recorder = AudioRecorder(
             audio=audio,

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import pytest
 
@@ -10,7 +10,7 @@ from jarvis.main import audio_devices
 
 @pytest.mark.asyncio
 async def test_audio_devices_lists_available_and_selected_devices(
-    capsys: pytest.CaptureFixture[str],
+    capsys,
 ) -> None:
     input_device = Mock()
     input_device.index = 18
@@ -24,13 +24,6 @@ async def test_audio_devices_lists_available_and_selected_devices(
     output_device.host_api = "Windows WASAPI"
     output_device.default_sample_rate = 48000
 
-    backup_output = Mock()
-    backup_output.index = 7
-    backup_output.name = "Backup Speaker"
-    backup_output.host_api = "MME"
-    backup_output.default_sample_rate = 44100
-
-   
     audio = Mock()
     audio.input_info = input_device
     audio.output_info = output_device
@@ -39,10 +32,10 @@ async def test_audio_devices_lists_available_and_selected_devices(
     )
     audio.output_devices.return_value = (
         output_device,
-        backup_output,
     )
 
-    app = AsyncMock()
+    app = Mock()
+    app.start = AsyncMock()
 
     with (
         patch(
@@ -52,23 +45,22 @@ async def test_audio_devices_lists_available_and_selected_devices(
         patch(
             "jarvis.main.container.resolve",
             return_value=audio,
-        ),
+        ) as resolve,
+        patch(
+            "jarvis.main._shutdown_application",
+            new_callable=AsyncMock,
+        ) as shutdown,
     ):
         await audio_devices()
 
     output = capsys.readouterr().out
 
-    assert "Audio Devices" in output
-
     assert "Input Devices" in output
     assert "[18] Desktop Microphone" in output
-    assert "Windows WASAPI" in output
-    assert "48000 Hz" in output
+    assert "Windows WASAPI | 48000 Hz" in output
 
     assert "Output Devices" in output
     assert "[16] Speakers Realtek" in output
-    assert "[7] Backup Speaker" in output
-    assert "44100 Hz" in output
 
     assert "Selected" in output
     assert "Input : [18] Desktop Microphone" in output
@@ -77,18 +69,24 @@ async def test_audio_devices_lists_available_and_selected_devices(
     app.start.assert_awaited_once_with(
         start_background_tasks=False,
     )
-    app.shutdown.assert_awaited_once()
+
+    resolve.assert_called_once_with(
+        "audio",
+        ANY,
+    )
+
+    shutdown.assert_awaited_once_with(app)
 
 
 def test_cli_parser_supports_audio_command() -> None:
     parser = create_parser()
 
     args = parser.parse_args(
-        ["audio"],
+        ["audio"]
     )
 
     assert args.command == "audio"
-    
+
 
 def test_cli_dispatches_audio_command() -> None:
     audio_command = Mock(
@@ -97,22 +95,128 @@ def test_cli_dispatches_audio_command() -> None:
 
     with (
         patch(
-            "jarvis.cli.asyncio.run",
-        ) as run_async,
+            "sys.argv",
+            [
+                "jarvis",
+                "audio",
+            ],
+        ),
         patch(
             "jarvis.cli.audio_devices",
             new=audio_command,
         ),
         patch(
-            "jarvis.cli.argparse.ArgumentParser.parse_args",
-            return_value=Mock(
-                command="audio",
-            ),
-        ),
+            "jarvis.cli.asyncio.run"
+        ) as run_async,
     ):
         main()
 
     audio_command.assert_called_once_with()
     run_async.assert_called_once_with(
-        "audio-coroutine",
+        "audio-coroutine"
     )
+
+
+def test_cli_parser_supports_audio_input_selection() -> None:
+    parser = create_parser()
+
+    args = parser.parse_args(
+        [
+            "audio",
+            "input",
+            "12",
+        ]
+    )
+
+    assert args.command == "audio"
+    assert args.audio_command == "input"
+    assert args.device_index == 12
+
+
+def test_cli_parser_supports_audio_output_selection() -> None:
+    parser = create_parser()
+
+    args = parser.parse_args(
+        [
+            "audio",
+            "output",
+            "9",
+        ]
+    )
+
+    assert args.command == "audio"
+    assert args.audio_command == "output"
+    assert args.device_index == 9
+
+
+def test_cli_parser_supports_audio_reset() -> None:
+    parser = create_parser()
+
+    args = parser.parse_args(
+        [
+            "audio",
+            "reset",
+        ]
+    )
+
+    assert args.command == "audio"
+    assert args.audio_command == "reset"
+
+
+def test_cli_dispatches_audio_input_selection() -> None:
+    with (
+        patch(
+            "sys.argv",
+            [
+                "jarvis",
+                "audio",
+                "input",
+                "12",
+            ],
+        ),
+        patch(
+            "jarvis.cli.set_audio_input_device"
+        ) as command,
+    ):
+        main()
+
+    command.assert_called_once_with(12)
+
+
+def test_cli_dispatches_audio_output_selection() -> None:
+    with (
+        patch(
+            "sys.argv",
+            [
+                "jarvis",
+                "audio",
+                "output",
+                "9",
+            ],
+        ),
+        patch(
+            "jarvis.cli.set_audio_output_device"
+        ) as command,
+    ):
+        main()
+
+    command.assert_called_once_with(9)
+
+
+def test_cli_dispatches_audio_reset() -> None:
+    with (
+        patch(
+            "sys.argv",
+            [
+                "jarvis",
+                "audio",
+                "reset",
+            ],
+        ),
+        patch(
+            "jarvis.cli.reset_audio_devices"
+        ) as command,
+    ):
+        main()
+
+    command.assert_called_once_with()

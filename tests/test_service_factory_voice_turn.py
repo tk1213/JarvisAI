@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
+import pytest
+
 from jarvis.audio.player import AudioPlayer
 from jarvis.audio.recorder import AudioRecorder
 from jarvis.core.service_factory import ServiceFactory
@@ -88,4 +90,123 @@ def test_voice_factory_shares_one_audio_manager() -> None:
     assert isinstance(
         registered["voice_turn"],
         VoiceTurnRuntime,
+    )
+
+def test_voice_factory_uses_audio_device_settings() -> None:
+    container = Mock()
+
+    conversation = Mock(
+        spec=ConversationManager
+    )
+    session = Mock(
+        spec=SessionManager
+    )
+
+    def resolve(
+        name: str,
+        expected_type=None,
+    ):
+        del expected_type
+
+        if name == "conversation":
+            return conversation
+
+        if name == "session":
+            return session
+
+        raise AssertionError(
+            name
+        )
+
+    container.resolve.side_effect = resolve
+
+    with (
+        patch(
+            "jarvis.core.service_factory.settings"
+        ) as settings,
+        patch(
+            "jarvis.core.service_factory.AudioManager"
+        ) as manager_type,
+        patch(
+            "jarvis.core.service_factory.SpeechToText"
+        ),
+        patch(
+            "jarvis.core.service_factory.TextToSpeech"
+        ),
+        patch(
+            "jarvis.core.service_factory.WakeWordService"
+        ),
+        patch(
+            "jarvis.core.service_factory.AssistantRuntimeService"
+        ),
+        patch(
+            "jarvis.core.service_factory.VoiceService"
+        ),
+    ):
+        settings.audio_input_device = 12
+        settings.audio_output_device = 9
+
+        ServiceFactory(
+            container
+        ).register_voice()
+
+    manager_type.assert_called_once_with(
+        input_device=12,
+        output_device=9,
+    )
+
+def test_voice_factory_propagates_invalid_persisted_audio_device() -> None:
+    container = Mock()
+
+    conversation = Mock(
+        spec=ConversationManager
+    )
+    session = Mock(
+        spec=SessionManager
+    )
+
+    def resolve(
+        name: str,
+        expected_type=None,
+    ):
+        del expected_type
+
+        if name == "conversation":
+            return conversation
+
+        if name == "session":
+            return session
+
+        raise AssertionError(
+            name
+        )
+
+    container.resolve.side_effect = resolve
+
+    with (
+        patch(
+            "jarvis.core.service_factory.settings"
+        ) as settings,
+        patch(
+            "jarvis.core.service_factory.AudioManager"
+        ) as manager_type,
+    ):
+        settings.audio_input_device = 999
+        settings.audio_output_device = 9
+
+        manager_type.side_effect = ValueError(
+            "Audio device 999 was not found."
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="Audio device 999 was not found",
+        ):
+            ServiceFactory(
+                container
+            ).register_voice()
+
+    manager_type.assert_called_once_with(
+        input_device=999,
+        output_device=9,
     )
