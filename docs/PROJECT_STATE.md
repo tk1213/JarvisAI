@@ -2477,6 +2477,70 @@ Validation:
 Commit:
 - `09335b1 feat: persist audio device selection`
 
+### Sprint 8.55 - End-to-end voice path validation
+
+Scope:
+
+* Validate the real production voice path on live hardware before adding further voice features.
+* Verify microphone capture, adaptive calibration, VAD, STT, conversation processing, TTS generation, and audio playback as one operational path.
+* Diagnose and resolve the Windows audio backend failure preventing callback microphone capture from the STT worker thread.
+* Preserve the existing asynchronous worker and cancellation architecture rather than bypassing it for hardware compatibility.
+* Avoid changing output-device policy without evidence that output playback requires the same workaround.
+
+Root cause:
+
+* Automatic input selection preferred the RØDE NT-USB Mini through Windows WASAPI.
+* Raw and callback InputStream capture on the main thread worked correctly with the WASAPI device.
+* Opening the same callback InputStream through `asyncio.to_thread()` reproduced PortAudio `PaErrorCode -9999` with a Windows WDM/WASAPI host error before VAD received its first audio frame.
+* The same physical RØDE microphone through Windows DirectSound worked successfully from the worker thread.
+* The failure was therefore isolated to the Windows WASAPI callback-stream and worker-thread combination on the validated hardware/driver environment, rather than VAD thresholds, STT, microphone signal quality, or the callback parameters themselves.
+
+Implementation:
+
+* Changed automatic input host-API priority to prefer Windows DirectSound before Windows WASAPI.
+* Kept Windows WASAPI available as the second input choice, followed by MME and Windows WDM-KS.
+* Separated output host-API priority from input priority so output selection remains Windows WASAPI first.
+* Added regression coverage for selecting Windows DirectSound when the same physical microphone is exposed through MME, DirectSound, WASAPI, and WDM-KS.
+* Preserved the existing STT `asyncio.to_thread()` worker model and cooperative cancellation behavior.
+* Temporary hardware-diagnostic tooling used to reproduce the thread-dependent failure was removed before commit.
+
+Live validation:
+
+* Callback VAD live gate completed successfully.
+* Noise RMS: `0.000117`.
+* Adaptive threshold: `0.005000`.
+* Speech trigger RMS: approximately `0.040151`.
+* VAD triggered successfully and transcribed `วันนี้วันอะไร`.
+* Callback microphone capture: PASS.
+* VAD trigger: PASS.
+* WAV persistence: PASS.
+* STT transcription: PASS.
+* VoiceTurnRuntime integration gate passed STT, ConversationManager, TTS, and empty-speech boundaries.
+* Real spoken end-to-end turn completed successfully.
+* Spoken transcript: `สวัสดีจาวิส วันนี้วันอะไร?`
+* Jarvis reply: `ครับ TK, วันนี้วันจันทร์ครับ`
+* Application lifecycle: PASS.
+* VAD -> STT: PASS.
+* ConversationManager: PASS.
+* TTS generation/playback: PASS.
+* Real voice gate: PASS.
+* Live output device during the real turn: `[10] Speakers (Realtek(R) Audio)`.
+* Time to first audio: approximately `3.589 s`.
+* TTS total latency: approximately `9.546 s`; latency optimization remains a separate future concern and was not included in this reliability fix.
+
+Validation:
+
+* Audio-device selection focused regression: PASS.
+* Full regression: 1105 passed.
+* Ruff: PASS.
+* Compileall: PASS.
+* git diff --check: PASS.
+
+Commit:
+
+* `14c3077 fix: prefer DirectSound for voice input`
+
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
