@@ -156,7 +156,7 @@ def test_sounddevice_shape_is_normalized() -> None:
     assert info.host_api == "Windows WASAPI"
     assert info.default_sample_rate == 44100
 
-def test_prefers_wasapi_for_same_physical_microphone() -> None:
+def test_prefers_directsound_for_same_physical_microphone() -> None:
     catalog = AudioDeviceCatalog(
         (
             device(
@@ -188,5 +188,5 @@ def test_prefers_wasapi_for_same_physical_microphone() -> None:
 
     selected = catalog.select_input()
 
-    assert selected.index == 18
-    assert selected.host_api == "Windows WASAPI"
+    assert selected.index == 8
+    assert selected.host_api == "Windows DirectSound"

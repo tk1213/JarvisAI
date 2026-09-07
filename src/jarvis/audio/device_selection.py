@@ -39,12 +39,18 @@ class AudioDeviceCatalog:
     """Pure device-selection logic independent from sounddevice."""
 
     INPUT_API_PRIORITY = (
+        "Windows DirectSound",
+        "Windows WASAPI",
+        "MME",
+        "Windows WDM-KS",
+    )
+
+    OUTPUT_API_PRIORITY = (
         "Windows WASAPI",
         "Windows DirectSound",
         "MME",
         "Windows WDM-KS",
     )
-    OUTPUT_API_PRIORITY = INPUT_API_PRIORITY
 
     INPUT_PREFERRED_NAMES = (
         "rode",
