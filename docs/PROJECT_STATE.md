@@ -2437,6 +2437,46 @@ Validation:
 Commit:
 - `dc1be40 feat: add audio device discovery command`
 
+### Sprint 8.54 - Persistent audio device selection
+
+Scope:
+- Persist explicit audio input and output device selections across process restarts.
+- Wire persisted device selections into the production voice composition.
+- Preserve automatic audio-device selection when no explicit selection is configured.
+- Validate explicit device selections before persistence and avoid silently falling back to a different device.
+- Preserve existing `.env` values while updating only the audio-device configuration keys.
+
+Implementation:
+- Added optional `audio_input_device` and `audio_output_device` settings, defaulting to automatic selection when unset.
+- Added `AudioDeviceConfig` using python-dotenv `set_key()` and `unset_key()` to update only `AUDIO_INPUT_DEVICE` and `AUDIO_OUTPUT_DEVICE`.
+- Persisted numeric device indices without quoting so they load directly into the integer settings fields.
+- Updated the voice composition to construct the shared AudioManager from the persisted input and output device settings.
+- Extended the `jarvis audio` CLI with `input <device_index>`, `output <device_index>`, and `reset` subcommands.
+- Input and output selections are validated against the live AudioManager catalog before being persisted.
+- Invalid explicit device selections are not persisted.
+- Explicit persisted devices fail visibly when unavailable rather than silently routing audio through another device.
+- `jarvis audio reset` removes both persisted selections and restores automatic-selection semantics.
+- Added regression coverage for settings loading/defaults, safe `.env` updates, CLI parsing and dispatch, persistence ordering, invalid-device handling, reset behavior, and production voice-factory wiring.
+
+Live validation:
+- `jarvis audio` successfully enumerated the host audio devices before persistence.
+- Persisted input: `[12] Microphone (Realtek HD Audio Mic input)`.
+- Persisted output: `[9] Speakers (Realtek(R) Audio)`.
+- `.env` contained `AUDIO_INPUT_DEVICE=12` and `AUDIO_OUTPUT_DEVICE=9` after selection.
+- A new `jarvis audio` process loaded the persisted selections and reported input `[12]` and output `[9]`.
+- Application startup and shutdown completed successfully with the persisted device configuration.
+- The real `.env` file remained outside version control.
+
+Validation:
+- Persistent-audio focused regression: 23 passed
+- Full regression: 1105 passed
+- Ruff: PASS
+- Compileall: PASS
+- git diff --check: PASS
+
+Commit:
+- `09335b1 feat: persist audio device selection`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
