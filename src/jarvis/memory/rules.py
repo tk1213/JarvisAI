@@ -50,7 +50,7 @@ MEMORY_RULES: tuple[MemoryRule, ...] = (
     MemoryRule(
         pattern=_compile(
             r"(?:ผมชอบดื่ม|ฉันชอบดื่ม|เครื่องดื่มที่ฉันชอบคือ|"
-            r"my favorite drink is|i like drinking)"
+            r"ฉันชอบ|my favorite drink is|i like drinking)"
             r"\s*(?P<value>[^,.;!?，。]+?)(?=\s+และ|$|[,.;!?，。])"
         ),
         category=MemoryCategory.PREFERENCE,

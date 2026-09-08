@@ -76,3 +76,14 @@ def test_name_question_is_not_saved_as_memory() -> None:
     )
 
     assert result == []
+
+def test_extracts_thai_favorite_drink() -> None:
+    extractor = MemoryExtractor()
+
+    result = extractor.extract(
+        "จำไว้ว่าฉันชอบกาแฟลาเต้"
+    )
+
+    assert len(result) == 1
+    assert result[0].key == "favorite_drink"
+    assert result[0].value == "กาแฟลาเต้"
