@@ -648,3 +648,34 @@ async def test_cancel_pending_smart_home_clears_confirmation(
     assert manager.has_pending_smart_home is False
 
     smart_home.turn_on.assert_not_awaited()
+
+@pytest.mark.asyncio
+async def test_ambiguous_thai_state_question_preserves_read_only_status(
+    conversation: tuple[
+        ConversationManager,
+        SmartHomeService,
+    ],
+) -> None:
+    manager, smart_home = conversation
+
+    first_reply = await manager.ask(
+        "Smart Plug เปิดอยู่หรือปิดอยู่"
+    )
+
+    assert "Living Room Smart Plug" in first_reply
+    assert "Bedroom Smart Plug" in first_reply
+
+    smart_home.turn_on.assert_not_awaited()
+    smart_home.turn_off.assert_not_awaited()
+    smart_home.toggle.assert_not_awaited()
+
+    second_reply = await manager.ask(
+        "Bedroom Smart Plug"
+    )
+
+    assert "Bedroom Smart Plug" in second_reply
+    assert manager.has_pending_smart_home is False
+
+    smart_home.turn_on.assert_not_awaited()
+    smart_home.turn_off.assert_not_awaited()
+    smart_home.toggle.assert_not_awaited()

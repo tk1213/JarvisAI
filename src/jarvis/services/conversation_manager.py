@@ -1729,25 +1729,17 @@ class ConversationManager:
         cls,
         text: str,
     ) -> SmartHomeAction | None:
-        if cls._is_turn_on_command(
-            text
-        ):
+        if cls._is_status_command(text):
+            return SmartHomeAction.STATUS
+
+        if cls._is_turn_on_command(text):
             return SmartHomeAction.TURN_ON
 
-        if cls._is_turn_off_command(
-            text
-        ):
+        if cls._is_turn_off_command(text):
             return SmartHomeAction.TURN_OFF
 
-        if cls._is_toggle_command(
-            text
-        ):
+        if cls._is_toggle_command(text):
             return SmartHomeAction.TOGGLE
-
-        if cls._is_status_command(
-            text
-        ):
-            return SmartHomeAction.STATUS
 
         return None
 
@@ -1842,8 +1834,10 @@ class ConversationManager:
     def _is_turn_off_command(
         text: str,
     ) -> bool:
+        if "ปิด" in text.replace("เปิด", ""):
+            return True
+
         keywords = (
-            "ปิด",
             "turn off",
             "switch off",
         )
@@ -1878,9 +1872,26 @@ class ConversationManager:
             "state",
         )
 
-        return any(
+        if any(
             keyword in text
             for keyword in keywords
+        ):
+            return True
+
+        thai_state_questions = (
+            "เปิดอยู่หรือปิดอยู่",
+            "เปิดหรือปิด",
+            "เปิดอยู่ไหม",
+            "ปิดอยู่ไหม",
+            "เปิดอยู่หรือไม่",
+            "ปิดอยู่หรือไม่",
+            "เปิดอยู่หรือเปล่า",
+            "ปิดอยู่หรือเปล่า",
+        )
+
+        return any(
+            phrase in text
+            for phrase in thai_state_questions
         )
 
     @staticmethod
