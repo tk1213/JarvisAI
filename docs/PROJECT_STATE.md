@@ -2588,6 +2588,60 @@ Remaining gap:
 - Persisted audio devices are still identified only by numeric PortAudio device index.
 - Device indices can change when the Windows audio catalog changes, so stable device identity and re-resolution remain a separate production-hardening concern.
 
+### Sprint 8.57 - Stable Audio Device Identity Persistence
+
+Scope:
+- Replace raw PortAudio device-index persistence as the primary audio-device identity mechanism.
+- Preserve legacy numeric device indices for backward compatibility.
+- Resolve persisted devices by stable exact identity using device name and host API.
+- Preserve Sprint 8.56 standalone audio diagnostics and explicit invalid-configuration failure semantics.
+
+Identity contract:
+- Stable identity v1 is the exact pair `(device name, host API)`.
+- Device sample rate is intentionally not part of the persisted identity.
+- When a complete identity is present, identity is authoritative over the persisted numeric index.
+- When identity is absent, the legacy numeric index remains supported as a fallback.
+- A persisted identity that cannot be resolved fails explicitly instead of falling back to a potentially stale numeric index.
+- Incomplete identities require both device name and host API.
+- Duplicate exact identities fail explicitly as ambiguous instead of selecting an arbitrary device.
+- Matching is exact; fuzzy device matching is outside the scope of Sprint 8.57.
+
+Persistence:
+- Added `AUDIO_INPUT_DEVICE_NAME`.
+- Added `AUDIO_INPUT_DEVICE_HOST_API`.
+- Added `AUDIO_OUTPUT_DEVICE_NAME`.
+- Added `AUDIO_OUTPUT_DEVICE_HOST_API`.
+- Existing `AUDIO_INPUT_DEVICE` and `AUDIO_OUTPUT_DEVICE` numeric keys remain supported.
+- New CLI input/output selections persist both the current numeric index and stable identity.
+- Audio-device reset removes persisted numeric and identity fields.
+
+Runtime integration:
+- `Settings` now loads persisted input/output identity fields.
+- `ServiceFactory` passes persisted identities into the production `AudioManager`.
+- `AudioManager` resolves complete identities against the current device catalog.
+- Stable identity takes precedence over a stale numeric index.
+- Missing persisted identities fail explicitly without numeric fallback.
+- `AudioDeviceCatalog.get_by_identity()` rejects missing and ambiguous identities.
+- Sprint 8.56 diagnostic isolation remains intact: `jarvis audio` continues to use a standalone discovery AudioManager.
+
+Validation:
+- Stable identity resolution regression: PASS.
+- Host-API-specific identity regression: PASS.
+- Missing identity explicit-failure regression: PASS.
+- Duplicate identity ambiguity regression: PASS.
+- AudioManager identity-authority regression: PASS.
+- Incomplete identity regression: PASS.
+- Settings persistence regression: PASS.
+- CLI identity persistence regression: PASS.
+- ServiceFactory identity wiring regression: PASS.
+- Full regression: 1121 passed.
+- Ruff: PASS.
+- Compileall: PASS.
+- git diff --check: PASS.
+
+Implementation commit:
+- `2f50560 fix: persist stable audio device identity`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
