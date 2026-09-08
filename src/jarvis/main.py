@@ -217,10 +217,7 @@ async def audio_devices() -> None:
             start_background_tasks=False,
         )
 
-        audio = container.resolve(
-            "audio",
-            AudioManager,
-        )
+        audio = AudioManager()
 
         print()
         print("Input Devices")

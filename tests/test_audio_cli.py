@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import ANY, AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -43,9 +43,9 @@ async def test_audio_devices_lists_available_and_selected_devices(
             return_value=app,
         ),
         patch(
-            "jarvis.main.container.resolve",
+            "jarvis.main.AudioManager",
             return_value=audio,
-        ) as resolve,
+        ) as audio_manager,
         patch(
             "jarvis.main._shutdown_application",
             new_callable=AsyncMock,
@@ -70,11 +70,7 @@ async def test_audio_devices_lists_available_and_selected_devices(
         start_background_tasks=False,
     )
 
-    resolve.assert_called_once_with(
-        "audio",
-        ANY,
-    )
-
+    audio_manager.assert_called_once_with()
     shutdown.assert_awaited_once_with(app)
 
 
@@ -220,3 +216,62 @@ def test_cli_dispatches_audio_reset() -> None:
         main()
 
     command.assert_called_once_with()
+
+@pytest.mark.asyncio
+async def test_audio_devices_does_not_require_registered_audio_service(
+    capsys,
+) -> None:
+    input_device = Mock()
+    input_device.index = 8
+    input_device.name = "Desktop Microphone"
+    input_device.host_api = "Windows DirectSound"
+    input_device.default_sample_rate = 44100
+
+    output_device = Mock()
+    output_device.index = 16
+    output_device.name = "Speakers Realtek"
+    output_device.host_api = "Windows WASAPI"
+    output_device.default_sample_rate = 48000
+
+    audio = Mock()
+    audio.input_info = input_device
+    audio.output_info = output_device
+    audio.input_devices.return_value = (
+        input_device,
+    )
+    audio.output_devices.return_value = (
+        output_device,
+    )
+
+    app = Mock()
+    app.start = AsyncMock()
+
+    with (
+        patch(
+            "jarvis.main.JarvisApplication",
+            return_value=app,
+        ),
+        patch(
+            "jarvis.main.AudioManager",
+            return_value=audio,
+        ) as audio_manager,
+        patch(
+            "jarvis.main.container.resolve",
+            side_effect=KeyError(
+                "Service 'audio' is not registered."
+            ),
+        ),
+        patch(
+            "jarvis.main._shutdown_application",
+            new_callable=AsyncMock,
+        ) as shutdown,
+    ):
+        await audio_devices()
+
+    output = capsys.readouterr().out
+
+    assert "[8] Desktop Microphone" in output
+    assert "[16] Speakers Realtek" in output
+
+    audio_manager.assert_called_once_with()
+    shutdown.assert_awaited_once_with(app)
