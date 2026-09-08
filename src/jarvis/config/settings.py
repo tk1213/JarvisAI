@@ -109,6 +109,11 @@ class Settings(BaseSettings):
     audio_input_device: int | None = None
     audio_output_device: int | None = None
 
+    audio_input_device_name: str | None = None
+    audio_input_device_host_api: str | None = None
+    audio_output_device_name: str | None = None
+    audio_output_device_host_api: str | None = None
+
     @property
     def is_development(self) -> bool:
         return (

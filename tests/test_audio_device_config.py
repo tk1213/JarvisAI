@@ -102,3 +102,113 @@ def test_reset_output_device_removes_persisted_value(
 
     assert "AUDIO_OUTPUT_DEVICE=" not in content
     assert "APP_ENVIRONMENT=development" in content
+
+def test_set_input_device_persists_identity(
+    tmp_path,
+) -> None:
+    env_file = tmp_path / ".env"
+    config = AudioDeviceConfig(
+        env_file=env_file,
+    )
+
+    config.set_input_device(
+        8,
+        name="Desktop Microphone (RØDE NT-USB Mini)",
+        host_api="Windows DirectSound",
+    )
+
+    content = env_file.read_text(
+        encoding="utf-8",
+    )
+
+    assert "AUDIO_INPUT_DEVICE=8" in content
+    assert (
+        "AUDIO_INPUT_DEVICE_NAME="
+        "Desktop Microphone (RØDE NT-USB Mini)"
+        in content
+    )
+    assert (
+        "AUDIO_INPUT_DEVICE_HOST_API="
+        "Windows DirectSound"
+        in content
+    )
+
+
+def test_set_output_device_persists_identity(
+    tmp_path,
+) -> None:
+    env_file = tmp_path / ".env"
+    config = AudioDeviceConfig(
+        env_file=env_file,
+    )
+
+    config.set_output_device(
+        16,
+        name="Speakers (Realtek(R) Audio)",
+        host_api="Windows WASAPI",
+    )
+
+    content = env_file.read_text(
+        encoding="utf-8",
+    )
+
+    assert "AUDIO_OUTPUT_DEVICE=16" in content
+    assert (
+        "AUDIO_OUTPUT_DEVICE_NAME="
+        "Speakers (Realtek(R) Audio)"
+        in content
+    )
+    assert (
+        "AUDIO_OUTPUT_DEVICE_HOST_API="
+        "Windows WASAPI"
+        in content
+    )
+
+def test_reset_input_device_removes_identity(
+    tmp_path,
+) -> None:
+    env_file = tmp_path / ".env"
+    config = AudioDeviceConfig(
+        env_file=env_file,
+    )
+
+    config.set_input_device(
+        8,
+        name="USB Microphone",
+        host_api="Windows DirectSound",
+    )
+
+    config.reset_input_device()
+
+    content = env_file.read_text(
+        encoding="utf-8",
+    )
+
+    assert "AUDIO_INPUT_DEVICE=" not in content
+    assert "AUDIO_INPUT_DEVICE_NAME=" not in content
+    assert "AUDIO_INPUT_DEVICE_HOST_API=" not in content
+
+
+def test_reset_output_device_removes_identity(
+    tmp_path,
+) -> None:
+    env_file = tmp_path / ".env"
+    config = AudioDeviceConfig(
+        env_file=env_file,
+    )
+
+    config.set_output_device(
+        16,
+        name="Speakers",
+        host_api="Windows WASAPI",
+    )
+
+    config.reset_output_device()
+
+    content = env_file.read_text(
+        encoding="utf-8",
+    )
+
+    assert "AUDIO_OUTPUT_DEVICE=" not in content
+    assert "AUDIO_OUTPUT_DEVICE_NAME=" not in content
+    assert "AUDIO_OUTPUT_DEVICE_HOST_API=" not in content

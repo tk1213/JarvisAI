@@ -12,9 +12,13 @@ from jarvis.cli import (
 
 
 def test_set_audio_input_device_validates_before_persisting() -> None:
+    selected = Mock()
+    selected.index = 12
+    selected.name = "Desktop Microphone"
+    selected.host_api = "Windows DirectSound"
+
     audio = Mock()
-    audio.input_info.index = 12
-    audio.input_info.name = "Microphone"
+    audio.select_input.return_value = selected
 
     config = Mock()
 
@@ -31,7 +35,11 @@ def test_set_audio_input_device_validates_before_persisting() -> None:
         set_audio_input_device(12)
 
     audio.select_input.assert_called_once_with(12)
-    config.set_input_device.assert_called_once_with(12)
+    config.set_input_device.assert_called_once_with(
+        12,
+        name="Desktop Microphone",
+        host_api="Windows DirectSound",
+    )
 
 
 def test_invalid_audio_input_device_is_not_persisted() -> None:
@@ -62,9 +70,13 @@ def test_invalid_audio_input_device_is_not_persisted() -> None:
 
 
 def test_set_audio_output_device_validates_before_persisting() -> None:
+    selected = Mock()
+    selected.index = 9
+    selected.name = "Speakers"
+    selected.host_api = "Windows WASAPI"
+
     audio = Mock()
-    audio.output_info.index = 9
-    audio.output_info.name = "Speakers"
+    audio.select_output.return_value = selected
 
     config = Mock()
 
@@ -81,7 +93,11 @@ def test_set_audio_output_device_validates_before_persisting() -> None:
         set_audio_output_device(9)
 
     audio.select_output.assert_called_once_with(9)
-    config.set_output_device.assert_called_once_with(9)
+    config.set_output_device.assert_called_once_with(
+        9,
+        name="Speakers",
+        host_api="Windows WASAPI",
+    )
 
 
 def test_invalid_audio_output_device_is_not_persisted() -> None:

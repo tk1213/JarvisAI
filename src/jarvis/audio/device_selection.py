@@ -204,6 +204,45 @@ class AudioDeviceCatalog:
             f"Audio device {index} was not found."
         )
 
+    def get_by_identity(
+        self,
+        *,
+        name: str,
+        host_api: str,
+        kind: AudioDeviceKind | None = None,
+    ) -> AudioDeviceInfo:
+        matches = tuple(
+            device
+            for device in self._devices
+            if (
+                device.name == name
+                and device.host_api == host_api
+            )
+        )
+
+        if not matches:
+            raise ValueError(
+                "Audio device identity was not found."
+            )
+
+        if len(matches) > 1:
+            raise ValueError(
+                "Audio device identity is ambiguous."
+            )
+
+        device = matches[0]
+
+        if (
+            kind is not None
+            and not device.supports(kind)
+        ):
+            raise ValueError(
+                "Audio device identity does not support "
+                f"{kind.value}."
+            )
+
+        return device
+
     def _select_best(
         self,
         *,

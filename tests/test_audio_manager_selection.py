@@ -156,3 +156,71 @@ def test_failed_refresh_preserves_previous_manager_state() -> None:
     assert manager.snapshot == previous_snapshot
     assert manager.input_devices() == previous_inputs
     assert manager.output_devices() == previous_outputs
+
+def test_manager_resolves_persisted_identity_to_current_index() -> None:
+    manager = AudioManager(
+        sounddevice_module=FakeSoundDevice(),
+        input_device_name="USB Microphone",
+        input_device_host_api="Windows WASAPI",
+        output_device_name="Speakers Realtek",
+        output_device_host_api="Windows WASAPI",
+    )
+
+    assert manager.input_device == 1
+    assert manager.output_device == 2
+
+
+def test_manager_identity_is_authoritative_over_stale_index() -> None:
+    manager = AudioManager(
+        sounddevice_module=FakeSoundDevice(),
+        input_device=0,
+        input_device_name="USB Microphone",
+        input_device_host_api="Windows WASAPI",
+        output_device=3,
+        output_device_name="Speakers Realtek",
+        output_device_host_api="Windows WASAPI",
+    )
+
+    assert manager.input_device == 1
+    assert manager.output_device == 2
+
+
+def test_manager_missing_persisted_identity_fails_without_index_fallback() -> None:
+    import pytest
+
+    with pytest.raises(
+        ValueError,
+        match="Audio device identity was not found",
+    ):
+        AudioManager(
+            sounddevice_module=FakeSoundDevice(),
+            input_device=1,
+            input_device_name="Missing Microphone",
+            input_device_host_api="Windows WASAPI",
+            output_device=2,
+        )
+
+def test_manager_rejects_incomplete_input_identity() -> None:
+    import pytest
+
+    with pytest.raises(
+        ValueError,
+        match="Audio device identity requires both name and host API",
+    ):
+        AudioManager(
+            sounddevice_module=FakeSoundDevice(),
+            input_device_name="USB Microphone",
+        )
+
+
+def test_manager_rejects_incomplete_output_identity() -> None:
+    import pytest
+
+    with pytest.raises(
+        ValueError,
+        match="Audio device identity requires both name and host API",
+    ):
+        AudioManager(
+            sounddevice_module=FakeSoundDevice(),
+            output_device_host_api="Windows WASAPI",
+        )

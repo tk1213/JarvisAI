@@ -209,6 +209,10 @@ class ServiceFactory:
         audio = AudioManager(
             input_device=settings.audio_input_device,
             output_device=settings.audio_output_device,
+            input_device_name=settings.audio_input_device_name,
+            input_device_host_api=settings.audio_input_device_host_api,
+            output_device_name=settings.audio_output_device_name,
+            output_device_host_api=settings.audio_output_device_host_api,
         )
 
         recorder = AudioRecorder(

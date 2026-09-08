@@ -13,15 +13,19 @@ def set_audio_input_device(
     device_index: int,
 ) -> None:
     audio = AudioManager()
-    audio.select_input(device_index)
+    selected = audio.select_input(
+        device_index,
+    )
 
-    config = AudioDeviceConfig()
-    config.set_input_device(device_index)
+    AudioDeviceConfig().set_input_device(
+        selected.index,
+        name=selected.name,
+        host_api=selected.host_api,
+    )
 
     print(
         "Audio input device saved: "
-        f"[{audio.input_info.index}] "
-        f"{audio.input_info.name}"
+        f"[{selected.index}] {selected.name}"
     )
 
 
@@ -29,15 +33,19 @@ def set_audio_output_device(
     device_index: int,
 ) -> None:
     audio = AudioManager()
-    audio.select_output(device_index)
+    selected = audio.select_output(
+        device_index,
+    )
 
-    config = AudioDeviceConfig()
-    config.set_output_device(device_index)
+    AudioDeviceConfig().set_output_device(
+        selected.index,
+        name=selected.name,
+        host_api=selected.host_api,
+    )
 
     print(
         "Audio output device saved: "
-        f"[{audio.output_info.index}] "
-        f"{audio.output_info.name}"
+        f"[{selected.index}] {selected.name}"
     )
 
 

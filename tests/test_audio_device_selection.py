@@ -156,6 +156,7 @@ def test_sounddevice_shape_is_normalized() -> None:
     assert info.host_api == "Windows WASAPI"
     assert info.default_sample_rate == 44100
 
+
 def test_prefers_directsound_for_same_physical_microphone() -> None:
     catalog = AudioDeviceCatalog(
         (
@@ -190,3 +191,103 @@ def test_prefers_directsound_for_same_physical_microphone() -> None:
 
     assert selected.index == 8
     assert selected.host_api == "Windows DirectSound"
+
+
+def test_device_identity_resolves_current_index() -> None:
+    catalog = AudioDeviceCatalog(
+        (
+            device(
+                11,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "Windows DirectSound",
+                inputs=1,
+            ),
+        )
+    )
+
+    resolved = catalog.get_by_identity(
+        name="Desktop Microphone (RØDE NT-USB Mini)",
+        host_api="Windows DirectSound",
+        kind=AudioDeviceKind.INPUT,
+    )
+
+    assert resolved.index == 11
+
+
+def test_device_identity_requires_matching_host_api() -> None:
+    catalog = AudioDeviceCatalog(
+        (
+            device(
+                8,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "Windows DirectSound",
+                inputs=1,
+            ),
+            device(
+                18,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "Windows WASAPI",
+                inputs=1,
+            ),
+        )
+    )
+
+    resolved = catalog.get_by_identity(
+        name="Desktop Microphone (RØDE NT-USB Mini)",
+        host_api="Windows DirectSound",
+        kind=AudioDeviceKind.INPUT,
+    )
+
+    assert resolved.index == 8
+
+
+def test_missing_device_identity_fails_explicitly() -> None:
+    catalog = AudioDeviceCatalog(
+        (
+            device(
+                18,
+                "Desktop Microphone (RØDE NT-USB Mini)",
+                "Windows WASAPI",
+                inputs=1,
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Audio device identity was not found",
+    ):
+        catalog.get_by_identity(
+            name="Desktop Microphone (RØDE NT-USB Mini)",
+            host_api="Windows DirectSound",
+            kind=AudioDeviceKind.INPUT,
+        )
+
+
+def test_duplicate_device_identity_fails_explicitly() -> None:
+    catalog = AudioDeviceCatalog(
+        (
+            device(
+                8,
+                "USB Microphone",
+                "Windows DirectSound",
+                inputs=1,
+            ),
+            device(
+                11,
+                "USB Microphone",
+                "Windows DirectSound",
+                inputs=1,
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Audio device identity is ambiguous",
+    ):
+        catalog.get_by_identity(
+            name="USB Microphone",
+            host_api="Windows DirectSound",
+            kind=AudioDeviceKind.INPUT,
+        )

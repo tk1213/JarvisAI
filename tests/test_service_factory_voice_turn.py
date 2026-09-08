@@ -145,6 +145,10 @@ def test_voice_factory_uses_audio_device_settings() -> None:
     ):
         settings.audio_input_device = 12
         settings.audio_output_device = 9
+        settings.audio_input_device_name = "Desktop Microphone"
+        settings.audio_input_device_host_api = "Windows DirectSound"
+        settings.audio_output_device_name = "Speakers"
+        settings.audio_output_device_host_api = "Windows WASAPI"
 
         ServiceFactory(
             container
@@ -153,7 +157,12 @@ def test_voice_factory_uses_audio_device_settings() -> None:
     manager_type.assert_called_once_with(
         input_device=12,
         output_device=9,
+        input_device_name="Desktop Microphone",
+        input_device_host_api="Windows DirectSound",
+        output_device_name="Speakers",
+        output_device_host_api="Windows WASAPI",
     )
+
 
 def test_voice_factory_propagates_invalid_persisted_audio_device() -> None:
     container = Mock()
@@ -193,6 +202,10 @@ def test_voice_factory_propagates_invalid_persisted_audio_device() -> None:
     ):
         settings.audio_input_device = 999
         settings.audio_output_device = 9
+        settings.audio_input_device_name = None
+        settings.audio_input_device_host_api = None
+        settings.audio_output_device_name = None
+        settings.audio_output_device_host_api = None
 
         manager_type.side_effect = ValueError(
             "Audio device 999 was not found."
@@ -209,4 +222,8 @@ def test_voice_factory_propagates_invalid_persisted_audio_device() -> None:
     manager_type.assert_called_once_with(
         input_device=999,
         output_device=9,
+        input_device_name=None,
+        input_device_host_api=None,
+        output_device_name=None,
+        output_device_host_api=None,
     )

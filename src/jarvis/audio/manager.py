@@ -26,6 +26,10 @@ class AudioManager:
         sounddevice_module: Any | None = None,
         input_device: int | None = None,
         output_device: int | None = None,
+        input_device_name: str | None = None,
+        input_device_host_api: str | None = None,
+        output_device_name: str | None = None,
+        output_device_host_api: str | None = None,
     ) -> None:
         if sounddevice_module is None:
             import sounddevice as sounddevice_module
@@ -35,21 +39,19 @@ class AudioManager:
 
         automatic = self._catalog.select()
 
-        self._input = (
-            self._catalog.get(
-                input_device,
-                kind=AudioDeviceKind.INPUT,
-            )
-            if input_device is not None
-            else automatic.input_device
+        self._input = self._resolve_initial_device(
+            kind=AudioDeviceKind.INPUT,
+            index=input_device,
+            name=input_device_name,
+            host_api=input_device_host_api,
+            automatic=automatic.input_device,
         )
-        self._output = (
-            self._catalog.get(
-                output_device,
-                kind=AudioDeviceKind.OUTPUT,
-            )
-            if output_device is not None
-            else automatic.output_device
+        self._output = self._resolve_initial_device(
+            kind=AudioDeviceKind.OUTPUT,
+            index=output_device,
+            name=output_device_name,
+            host_api=output_device_host_api,
+            automatic=automatic.output_device,
         )
 
     @property
@@ -129,6 +131,35 @@ class AudioManager:
         self,
     ) -> tuple[AudioDeviceInfo, ...]:
         return self._catalog.output_devices()
+
+    def _resolve_initial_device(
+        self,
+        *,
+        kind: AudioDeviceKind,
+        index: int | None,
+        name: str | None,
+        host_api: str | None,
+        automatic: AudioDeviceInfo,
+    ) -> AudioDeviceInfo:
+        if name is not None or host_api is not None:
+            if name is None or host_api is None:
+                raise ValueError(
+                    "Audio device identity requires both name and host API."
+                )
+
+            return self._catalog.get_by_identity(
+                name=name,
+                host_api=host_api,
+                kind=kind,
+            )
+
+        if index is not None:
+            return self._catalog.get(
+                index,
+                kind=kind,
+            )
+
+        return automatic
 
     def _build_catalog(
         self,
