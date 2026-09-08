@@ -19,6 +19,11 @@ dependencies = [
     "openai",
     "httpx",
     "tzdata",
+    "sounddevice",
+    "numpy",
+    "soundfile",
+    "scipy",
+    "pyopen-wakeword",
 ]
 
 [project.scripts]
