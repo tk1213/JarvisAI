@@ -2724,6 +2724,61 @@ rewrite.
 
 Next: Sprint 10 — Real-World Runtime Validation.
 
+## Sprint 10 - Real-World Runtime Validation
+
+Status: CLOSED
+
+Sprint 10 validated the canonical production runtime through `jarvis run` using real voice, audio, OpenAI, memory, and Tuya hardware paths.
+
+### Validation summary
+
+- Wake word detection and acknowledgement playback: PASS
+- Real microphone input and STT: PASS
+- Continuous conversation and follow-up listening: PASS
+- Deterministic system capability routing: PASS
+- TTS generation and playback: PASS
+- Wake re-arm after conversation completion: PASS
+- No-speech recovery without runtime restart: PASS
+- Durable user memory across application restart: PASS
+- Thai favorite-drink memory extraction: PASS
+- Tuya cloud connectivity after service-plan restoration: PASS
+- Smart Home device discovery and clarification: PASS
+- Read-only Smart Home status query without side effects: PASS
+- Smart Home side-effect confirmation gate: PASS
+- Confirmed physical Tuya execution: PASS
+- Smart Home cancellation without physical side effect: PASS
+- Runtime continuity after Smart Home execution: PASS
+
+### Production fixes completed during Sprint 10
+
+- `c624846` - start TTS playback on the event-loop thread to avoid worker-thread PortAudio `-9999` failures observed on the validated Windows audio path.
+- `7f3e9d9` - support Thai favorite-drink durable memory extraction.
+- `ba1b88e` - preserve read-only Smart Home status intent through ambiguous-device clarification and prevent status questions from becoming side-effect commands.
+
+### Regression gate
+
+- Full test suite: 1126 passed
+- Ruff: PASS
+- Python compileall: PASS
+- git diff check: PASS
+- Focused Smart Home regression: 79 passed
+
+### Live Smart Home safety result
+
+A real read-only state question for Smart plug 2 was resolved through device clarification and returned the device status without requesting confirmation or changing the physical device.
+
+A side-effect command required explicit confirmation before execution. A separate cancellation test left Smart plug 2 physically unchanged, and a subsequent read-only status query confirmed the expected state.
+
+STT occasionally transcribed the Thai word for plug incorrectly during live testing. These misrecognitions failed safely without executing an unintended Smart Home action and are not considered a Sprint 10 blocker.
+
+### Sprint 10 conclusion
+
+The production runtime completed the required real-world validation without routine application restart. The identified Sprint 10 runtime blockers were corrected and regression-tested.
+
+Sprint 10 is CLOSED.
+
+Next: Sprint 11 - Operational Reliability.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
