@@ -2871,6 +2871,41 @@ No new features were introduced during Sprint 12. Changes were limited to releas
 
 Next milestone: Sprint 13 — v1.0 Production Release.
 
+## Sprint 13 — v1.0 Production Release
+
+Status: COMPLETE
+
+Production release: `v1.0.0`
+Package version: `1.0.0`
+
+### Production Release Validation
+
+- Sprint 12 release candidate `v1.0.0-rc.1` completed successfully.
+- No new features or architectural refactors were introduced after the release candidate.
+- Production version metadata updated to `1.0.0`.
+- Full automated regression suite passed: 1126 tests.
+- Ruff passed.
+- Python compile validation passed.
+- `git diff --check` passed.
+- Final production `jarvis run` live hardware smoke test passed.
+- Wake word detection and acknowledgement playback passed.
+- Deterministic system query passed.
+- Smart Home read-only status path passed without side effects.
+- Smart Home clarification remained fail-safe when STT recognition was imperfect.
+- Smart Home side-effect command required explicit confirmation.
+- Smart Home cancellation safety passed without executing the requested state change.
+- Wake re-arm after the completed conversation passed.
+- TTS and audio playback remained operational.
+- Clean Ctrl+C shutdown passed without lifecycle errors.
+
+### v1.0 Result
+
+JarvisAI v1.0 has completed the production release gate.
+
+The v1.0 production scope is complete.
+
+Release tag: `v1.0.0`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
