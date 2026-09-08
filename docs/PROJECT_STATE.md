@@ -2642,6 +2642,39 @@ Validation:
 Implementation commit:
 - `2f50560 fix: persist stable audio device identity`
 
+### Sprint 8.58 - Audio Identity Persistence Integrity
+
+Scope:
+- Harden persisted audio-device identity writes.
+- Reject incomplete identity pairs before modifying the environment file.
+- Preserve legacy numeric-only persistence for backward compatibility.
+- Preserve complete stable identity persistence introduced in Sprint 8.57.
+
+Persistence contract:
+- `name=None` and `host_api=None` remain valid for legacy numeric-only persistence.
+- Complete `(name, host_api)` identity pairs remain valid.
+- A name without a host API is rejected.
+- A host API without a name is rejected.
+- Validation occurs before any `.env` write, preventing partial persistence.
+
+Implementation:
+- Added centralized audio identity validation in `AudioDeviceConfig`.
+- Applied validation to both input and output device persistence paths.
+- Preserved existing reset behavior and stable identity keys.
+
+Validation:
+- Incomplete input identity regression: PASS.
+- Incomplete output identity regression: PASS.
+- No-write-before-validation regression: PASS.
+- Focused audio persistence regression: 32 passed.
+- Full regression: 1123 passed.
+- Ruff: PASS.
+- Compileall: PASS.
+- git diff --check: PASS.
+
+Implementation commit:
+- `49c01bb fix: reject incomplete audio device identity`
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
