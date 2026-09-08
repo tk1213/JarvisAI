@@ -2779,6 +2779,58 @@ Sprint 10 is CLOSED.
 
 Next: Sprint 11 - Operational Reliability.
 
+## Sprint 11 - Operational Reliability
+
+Status: CLOSED
+
+Sprint 11 audited the production operational lifecycle and daily-use reliability boundaries without adding new features or rebuilding existing subsystems.
+
+### Operational audit
+
+The canonical `jarvis run` lifecycle was reviewed across application startup, runtime execution, cancellation, shutdown, background tasks, skills, Smart Home, database, wake-word resources, configuration, health diagnostics, and recovery behavior.
+
+The existing implementation already provides:
+
+- Startup rollback for partially initialized resources.
+- Cancellation-aware application shutdown.
+- Background-task cancellation and cleanup.
+- Skill startup and shutdown isolation.
+- Smart Home connection failure isolation.
+- Database lifecycle cleanup.
+- Wake-word cancellation cleanup.
+- OpenAI and Smart Home configuration readiness checks.
+- Runtime component readiness diagnostics.
+- Audio device diagnostics.
+- Database and heartbeat diagnostics.
+- `jarvis doctor` operational diagnostics.
+
+No new production runtime blocker was identified during the Sprint 11 audit.
+
+### Repository cleanup
+
+Removed five obsolete tracked `service_factory.py.pack_*_backup` files from the production source tree.
+
+Implementation commit:
+
+- `cffd4d5` - remove obsolete service factory backups.
+
+### Regression gate
+
+- Full test suite: 1126 passed
+- Ruff: PASS
+- Python compileall: PASS
+- git diff check: PASS
+
+### Sprint 11 conclusion
+
+The existing operational lifecycle and diagnostics were found to be sufficiently protected for the current production baseline. No speculative runtime changes were introduced.
+
+Obsolete tracked implementation backups were removed to reduce source-tree ambiguity and maintenance risk.
+
+Sprint 11 is CLOSED.
+
+Next: Sprint 12 - v1.0 Release Candidate.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
