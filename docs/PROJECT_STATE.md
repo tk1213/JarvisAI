@@ -2831,6 +2831,46 @@ Sprint 11 is CLOSED.
 
 Next: Sprint 12 - v1.0 Release Candidate.
 
+## Sprint 12 — v1.0 Release Candidate
+
+Status: COMPLETE
+
+Release candidate: `v1.0.0-rc.1`
+Package version: `1.0.0rc1`
+
+### Release Candidate Validation
+
+- Feature freeze maintained.
+- Clean package installation validated in an isolated virtual environment.
+- Runtime dependencies completed in `pyproject.toml`.
+- Wake-word runtime dependency declared.
+- Environment template normalized to `.env.example`.
+- Default TTS model updated to `gpt-4o-mini-tts`.
+- CLI installation and `jarvis --help` validated.
+- Package dependency integrity validated with `pip check`.
+- Full automated regression suite passed: 1126 tests.
+- Ruff passed.
+- Python compile validation passed.
+- `git diff --check` passed.
+- Production `jarvis run` live validation passed.
+- Wake word and wake re-arm passed.
+- General conversation and deterministic system query passed.
+- Durable user-memory recall passed.
+- Smart Home read-only status path passed without side effects.
+- Smart Home cancellation safety passed.
+- Smart Home explicit confirmation and physical execution passed.
+- TTS/audio playback remained operational throughout the live session.
+- Runtime continued normally after physical device execution.
+- Clean Ctrl+C shutdown passed without lifecycle errors.
+
+### Sprint 12 Result
+
+JarvisAI satisfies the v1.0 release-candidate gate.
+
+No new features were introduced during Sprint 12. Changes were limited to release packaging, dependency completeness, configuration defaults, version metadata, and release validation.
+
+Next milestone: Sprint 13 — v1.0 Production Release.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
