@@ -2675,6 +2675,55 @@ Validation:
 Implementation commit:
 - `49c01bb fix: reject incomplete audio device identity`
 
+## Sprint 9 — System Integration Audit & Gap Closure
+
+Status: CLOSED
+
+Sprint 9 audited the existing JarvisAI production integration path without
+rebuilding already implemented subsystems.
+
+Confirmed production runtime path:
+
+Wake -> AssistantRuntimeService -> Voice/STT -> ConversationManager
+-> capability/tool/smart-home execution -> TTS -> wake re-arm
+
+Key findings:
+
+- `AssistantRuntimeService` is the canonical production runtime used by
+  `jarvis run`.
+- `JarvisApplication` and `ServiceFactory` remain the production composition
+  and lifecycle boundaries.
+- Alternate runtime abstractions such as `ContinuousAssistantRuntime`,
+  `WakeActivatedTurnRuntime`, and `VoiceDialogueRuntime` remain supporting
+  test/live-validation components rather than the top-level production entry
+  point.
+- Conversation routing has explicit ownership and precedence.
+- Pending conversation precedence is:
+  AI Agent -> Planner -> Smart Home.
+- AI routing uses deterministic system capabilities first, followed by native
+  tool calling, compatibility capability resolution, and standard AI fallback.
+- Existing Voice, Wake, Memory, Planner, Agent, Smart Home, Tuya, confirmation,
+  cancellation, recovery, and audio systems were not rebuilt.
+- Thai source encoding was verified directly from UTF-8 bytes. No source
+  mojibake or encoding corruption was present.
+
+Gap closed:
+
+- Added regression coverage locking pending-route precedence between AI Agent,
+  Planner, and Smart Home handling.
+
+Validation:
+
+- Full regression: 1124 passed
+- Ruff: PASS
+- Python compile validation: PASS
+- git diff --check: PASS
+
+Sprint 9 introduced no new production feature and no production architecture
+rewrite.
+
+Next: Sprint 10 — Real-World Runtime Validation.
+
 The next Sprint 8 scope has not yet been fixed.
 
 Scope selection should be based on:
