@@ -87,13 +87,17 @@ class TTSService:
 
             playback_started_at = time.perf_counter()
 
+        self.player.play(
+            audio_file,
+            blocking=False,
+            on_playback_start=mark_playback_start,
+        )
+
         playback_task = asyncio.create_task(
             asyncio.to_thread(
-                self.player.play,
-                audio_file,
-                on_playback_start=mark_playback_start,
+                self.player.wait,
             ),
-            name="jarvis-tts-playback",
+            name="jarvis-tts-playback-wait",
         )
 
         try:

@@ -116,6 +116,11 @@ class AudioPlayer:
         if blocking:
             sd.wait()
 
+    def wait(
+        self,
+    ) -> None:
+        sd.wait()
+
     def stop(
         self,
     ) -> None:

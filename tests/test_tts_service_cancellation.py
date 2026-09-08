@@ -11,7 +11,7 @@ from jarvis.services.tts_service import TTSService
 
 
 @pytest.mark.asyncio
-async def test_speak_runs_blocking_player_off_event_loop(
+async def test_speak_starts_player_on_event_loop_and_waits_off_event_loop(
     tmp_path: Path,
 ) -> None:
     audio_file = tmp_path / "reply.wav"
@@ -19,11 +19,13 @@ async def test_speak_runs_blocking_player_off_event_loop(
 
     event_loop_thread = threading.get_ident()
     playback_thread: int | None = None
+    wait_thread: int | None = None
 
     player = Mock()
 
     def play(
         filename: str | Path,
+        blocking: bool = True,
         *,
         on_playback_start,
     ) -> None:
@@ -32,9 +34,18 @@ async def test_speak_runs_blocking_player_off_event_loop(
         del filename
 
         playback_thread = threading.get_ident()
+
+        assert blocking is False
+
         on_playback_start()
 
+    def wait() -> None:
+        nonlocal wait_thread
+
+        wait_thread = threading.get_ident()
+
     player.play.side_effect = play
+    player.wait.side_effect = wait
 
     tts = Mock()
     tts.generate = AsyncMock(
@@ -52,8 +63,15 @@ async def test_speak_runs_blocking_player_off_event_loop(
     )
 
     assert result == audio_file
-    assert playback_thread is not None
-    assert playback_thread != event_loop_thread
+
+    assert playback_thread == event_loop_thread
+
+    assert wait_thread is not None
+    assert wait_thread != event_loop_thread
+
+    player.play.assert_called_once()
+    player.wait.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_speak_cancellation_stops_playback_and_waits_for_worker(
@@ -70,14 +88,18 @@ async def test_speak_cancellation_stops_playback_and_waits_for_worker(
 
     def play(
         filename: str | Path,
+        blocking: bool = True,
         *,
         on_playback_start,
     ) -> None:
         del filename
 
+        assert blocking is False
+
         on_playback_start()
         playback_started.set()
 
+    def wait() -> None:
         playback_stopped.wait(
             timeout=5.0,
         )
@@ -85,6 +107,7 @@ async def test_speak_cancellation_stops_playback_and_waits_for_worker(
         playback_finished.set()
 
     player.play.side_effect = play
+    player.wait.side_effect = wait
 
     def stop() -> None:
         playback_stopped.set()
@@ -123,7 +146,10 @@ async def test_speak_cancellation_stops_playback_and_waits_for_worker(
         await task
 
     player.stop.assert_called_once()
+    player.wait.assert_called_once()
+
     assert playback_finished.is_set()
+
 
 @pytest.mark.asyncio
 async def test_speak_cancellation_during_generation_does_not_stop_player(
@@ -175,7 +201,9 @@ async def test_speak_cancellation_during_generation_does_not_stop_player(
         await task
 
     player.play.assert_not_called()
+    player.wait.assert_not_called()
     player.stop.assert_not_called()
+
 
 @pytest.mark.asyncio
 async def test_speak_preserves_caller_cancellation_when_playback_cleanup_fails(
@@ -190,15 +218,19 @@ async def test_speak_preserves_caller_cancellation_when_playback_cleanup_fails(
     player = Mock()
 
     def play(
-        audio_file: Path,
+        filename: str | Path,
+        blocking: bool = True,
         *,
         on_playback_start,
     ) -> None:
-        del audio_file
+        del filename
+
+        assert blocking is False
 
         on_playback_start()
         playback_started.set()
 
+    def wait() -> None:
         release_playback.wait()
 
         raise RuntimeError(
@@ -207,6 +239,9 @@ async def test_speak_preserves_caller_cancellation_when_playback_cleanup_fails(
 
     player.play = Mock(
         side_effect=play
+    )
+    player.wait = Mock(
+        side_effect=wait
     )
 
     def stop() -> None:
@@ -248,6 +283,8 @@ async def test_speak_preserves_caller_cancellation_when_playback_cleanup_fails(
         await task
 
     player.stop.assert_called_once()
+    player.wait.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_speak_preserves_caller_cancellation_when_playback_worker_is_cancelled(
@@ -262,20 +299,28 @@ async def test_speak_preserves_caller_cancellation_when_playback_worker_is_cance
     player = Mock()
 
     def play(
-        audio_file: Path,
+        filename: str | Path,
+        blocking: bool = True,
         *,
         on_playback_start,
     ) -> None:
-        del audio_file
+        del filename
+
+        assert blocking is False
 
         on_playback_start()
         playback_started.set()
+
+    def wait() -> None:
         release_playback.wait()
 
         raise asyncio.CancelledError()
 
     player.play = Mock(
         side_effect=play
+    )
+    player.wait = Mock(
+        side_effect=wait
     )
 
     def stop() -> None:
@@ -317,3 +362,4 @@ async def test_speak_preserves_caller_cancellation_when_playback_worker_is_cance
         await task
 
     player.stop.assert_called_once()
+    player.wait.assert_called_once()
