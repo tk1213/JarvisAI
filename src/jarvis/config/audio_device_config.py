@@ -21,6 +21,17 @@ class AudioDeviceConfig:
     ) -> None:
         self._env_file = Path(env_file)
 
+    @staticmethod
+    def _validate_identity(
+        *,
+        name: str | None,
+        host_api: str | None,
+    ) -> None:
+        if (name is None) != (host_api is None):
+            raise ValueError(
+                "Audio device identity requires both name and host API."
+            )
+
     def set_input_device(
         self,
         device_index: int,
@@ -28,6 +39,11 @@ class AudioDeviceConfig:
         name: str | None = None,
         host_api: str | None = None,
     ) -> None:
+        self._validate_identity(
+            name=name,
+            host_api=host_api,
+        )
+
         set_key(
             str(self._env_file),
             self.INPUT_KEY,
@@ -35,15 +51,13 @@ class AudioDeviceConfig:
             quote_mode="never",
         )
 
-        if name is not None:
+        if name is not None and host_api is not None:
             set_key(
                 str(self._env_file),
                 self.INPUT_NAME_KEY,
                 name,
                 quote_mode="never",
             )
-
-        if host_api is not None:
             set_key(
                 str(self._env_file),
                 self.INPUT_HOST_API_KEY,
@@ -58,6 +72,11 @@ class AudioDeviceConfig:
         name: str | None = None,
         host_api: str | None = None,
     ) -> None:
+        self._validate_identity(
+            name=name,
+            host_api=host_api,
+        )
+
         set_key(
             str(self._env_file),
             self.OUTPUT_KEY,
@@ -65,15 +84,13 @@ class AudioDeviceConfig:
             quote_mode="never",
         )
 
-        if name is not None:
+        if name is not None and host_api is not None:
             set_key(
                 str(self._env_file),
                 self.OUTPUT_NAME_KEY,
                 name,
                 quote_mode="never",
             )
-
-        if host_api is not None:
             set_key(
                 str(self._env_file),
                 self.OUTPUT_HOST_API_KEY,

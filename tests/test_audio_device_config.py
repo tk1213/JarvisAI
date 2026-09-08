@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from jarvis.config.audio_device_config import (
     AudioDeviceConfig,
 )
@@ -212,3 +214,40 @@ def test_reset_output_device_removes_identity(
     assert "AUDIO_OUTPUT_DEVICE=" not in content
     assert "AUDIO_OUTPUT_DEVICE_NAME=" not in content
     assert "AUDIO_OUTPUT_DEVICE_HOST_API=" not in content
+
+def test_set_input_device_rejects_incomplete_identity_without_writing(
+    tmp_path,
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("EXISTING=value\n", encoding="utf-8")
+    config = AudioDeviceConfig(env_file=env_file)
+
+    with pytest.raises(
+        ValueError,
+        match="Audio device identity requires both name and host API",
+    ):
+        config.set_input_device(
+            8,
+            name="USB Microphone",
+        )
+
+    assert env_file.read_text(encoding="utf-8") == "EXISTING=value\n"
+
+
+def test_set_output_device_rejects_incomplete_identity_without_writing(
+    tmp_path,
+) -> None:
+    env_file = tmp_path / ".env"
+    env_file.write_text("EXISTING=value\n", encoding="utf-8")
+    config = AudioDeviceConfig(env_file=env_file)
+
+    with pytest.raises(
+        ValueError,
+        match="Audio device identity requires both name and host API",
+    ):
+        config.set_output_device(
+            9,
+            host_api="Windows WASAPI",
+        )
+
+    assert env_file.read_text(encoding="utf-8") == "EXISTING=value\n"
