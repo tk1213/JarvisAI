@@ -2540,6 +2540,53 @@ Commit:
 
 * `14c3077 fix: prefer DirectSound for voice input`
 
+### Sprint 8.56 - Audio CLI recovery from invalid persisted configuration
+
+Scope:
+- Keep audio-device diagnostics usable when persisted production audio configuration is invalid or stale.
+- Prevent `jarvis audio` from depending on successful registration of the production voice AudioManager.
+- Preserve the existing persistent-selection validation and explicit-failure semantics.
+- Limit this sprint to diagnostic recovery; stable audio-device identity persistence remains a separate problem.
+
+Root cause:
+- `jarvis audio` previously started JarvisApplication and then resolved the registered `audio` service from the application container.
+- Production voice registration constructs AudioManager from persisted numeric input and output indices.
+- If a persisted index becomes invalid after the Windows or PortAudio device catalog changes, voice registration can fail and the `audio` service is not registered.
+- The diagnostic command then fails while resolving the same missing service, preventing it from listing currently available devices needed for recovery.
+
+Implementation:
+- Changed `audio_devices()` to construct a standalone `AudioManager()` for hardware discovery instead of resolving the production `audio` service from the container.
+- The diagnostic AudioManager therefore uses current automatic device discovery independently of persisted production device indices.
+- JarvisApplication startup and shutdown behavior was preserved to minimize lifecycle changes.
+- Existing `jarvis audio input <index>` and `jarvis audio output <index>` validation semantics remain unchanged.
+- Invalid selections are still rejected before persistence.
+- `jarvis audio reset` continues to remove persisted input and output selections.
+- Added regression coverage proving audio diagnostics do not require a registered production audio service.
+- Updated the existing audio CLI listing regression to validate the standalone AudioManager contract.
+
+Live validation:
+- `jarvis audio input 999` failed with `ValueError: Audio device 999 was not found.` and did not persist the invalid selection.
+- A stale production configuration was then simulated with `AUDIO_INPUT_DEVICE=999`.
+- `jarvis audio` remained operational despite the invalid persisted production input.
+- The command successfully enumerated current input and output hardware.
+- Automatic diagnostic input selection: `[8] Desktop Microphone (RØDE NT-USB Mini)` through Windows DirectSound.
+- Automatic diagnostic output selection: `[16] Speakers (Realtek(R) Audio)` through Windows WASAPI.
+- `jarvis audio reset` successfully restored automatic production-selection semantics.
+
+Validation:
+- Initial recovery regression: 1 failed, 9 passed (expected RED).
+- Focused audio configuration and CLI regression: 21 passed.
+- Full regression: 1106 passed.
+- Ruff: PASS.
+- Compileall: PASS.
+- git diff --check: PASS.
+
+Commit:
+- `deff7c0 fix: keep audio diagnostics recoverable`
+
+Remaining gap:
+- Persisted audio devices are still identified only by numeric PortAudio device index.
+- Device indices can change when the Windows audio catalog changes, so stable device identity and re-resolution remain a separate production-hardening concern.
 
 The next Sprint 8 scope has not yet been fixed.
 
