@@ -60,3 +60,29 @@ def test_preserves_plain_text() -> None:
     assert normalizer().normalize(
         "เปิดไฟห้องนั่งเล่นแล้วครับ"
     ) == "เปิดไฟห้องนั่งเล่นแล้วครับ"
+
+def test_normalizes_celsius_temperature() -> None:
+    assert normalizer().normalize(
+        "อุณหภูมิ 33°C"
+    ) == (
+        "อุณหภูมิ "
+        "สามสิบสามองศาเซลเซียส"
+    )
+
+
+def test_normalizes_dollar_decimal_amount() -> None:
+    assert normalizer().normalize(
+        "หุ้น Apple อยู่ที่ 316.22 ดอลลาร์สหรัฐ"
+    ) == (
+        "หุ้น Apple อยู่ที่ "
+        "สามร้อยสิบหกจุดสองสองดอลลาร์สหรัฐ"
+    )
+
+
+def test_normalizes_time_without_speaking_seconds_or_utc() -> None:
+    assert normalizer().normalize(
+        "อัปเดตเวลา 13:12:06 UTC"
+    ) == (
+        "อัปเดตเวลา สิบสามนาฬิกา "
+        "สิบสองนาที"
+    )

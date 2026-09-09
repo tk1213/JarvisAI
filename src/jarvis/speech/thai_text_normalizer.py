@@ -42,6 +42,7 @@ class ThaiSpeechTextNormalizer:
         r"([01]?\d|2[0-3])"
         r"[:.]"
         r"([0-5]\d)"
+        r"(?::([0-5]\d))?"
         r"\s*(?:น\.|นาฬิกา)"
     )
     _COLON_TIME = re.compile(
@@ -49,6 +50,8 @@ class ThaiSpeechTextNormalizer:
         r"([01]?\d|2[0-3])"
         r":"
         r"([0-5]\d)"
+        r"(?::([0-5]\d))?"
+        r"(?:\s*UTC)?"
         r"(?!\d)"
     )
 
@@ -57,6 +60,21 @@ class ThaiSpeechTextNormalizer:
         r"(\d{1,3}(?:,\d{3})+|\d+)"
         r"(?:\.(\d{1,2}))?"
         r"\s*บาท"
+    )
+
+    _TEMPERATURE = re.compile(
+        r"(?<![\d.])"
+        r"(-?\d+(?:\.\d+)?)"
+        r"\s*°\s*"
+        r"([CcFf])"
+    )
+
+    _DOLLAR_AMOUNT = re.compile(
+        r"(?<![\d.,])"
+        r"(\d{1,3}(?:,\d{3})+|\d+)"
+        r"(?:\.(\d+))?"
+        r"\s*"
+        r"(ดอลลาร์สหรัฐ|ดอลลาร์)"
     )
 
     def normalize(
@@ -84,6 +102,14 @@ class ThaiSpeechTextNormalizer:
         )
         normalized = self._COLON_TIME.sub(
             self._replace_time,
+            normalized,
+        )
+        normalized = self._TEMPERATURE.sub(
+            self._replace_temperature,
+            normalized,
+        )
+        normalized = self._DOLLAR_AMOUNT.sub(
+            self._replace_dollar_amount,
             normalized,
         )
         normalized = self._MONEY.sub(
@@ -207,6 +233,81 @@ class ThaiSpeechTextNormalizer:
                 )
                 + "นาที"
             )
+
+        return spoken
+
+    @classmethod
+    def _replace_temperature(
+        cls,
+        match: Match[str],
+    ) -> str:
+        value = cls._number_text_to_words(
+            match.group(1)
+        )
+        scale = match.group(2).lower()
+
+        unit = (
+            "องศาเซลเซียส"
+            if scale == "c"
+            else "องศาฟาเรนไฮต์"
+        )
+
+        return value + unit
+
+    @classmethod
+    def _replace_dollar_amount(
+        cls,
+        match: Match[str],
+    ) -> str:
+        integer_text = match.group(1).replace(
+            ",",
+            "",
+        )
+        decimal_text = match.group(2)
+        currency = match.group(3)
+
+        spoken = cls.number_to_thai_words(
+            int(integer_text)
+        )
+
+        if decimal_text:
+            spoken += (
+                "จุด"
+                + "".join(
+                    cls._DIGIT_WORDS[int(digit)]
+                    for digit in decimal_text
+                )
+            )
+
+        return spoken + currency
+
+    @classmethod
+    def _number_text_to_words(
+        cls,
+        value: str,
+    ) -> str:
+        negative = value.startswith("-")
+        unsigned = value.removeprefix("-")
+
+        integer_text, separator, decimal_text = (
+            unsigned.partition(".")
+        )
+
+        spoken = cls.number_to_thai_words(
+            int(integer_text)
+        )
+
+        if separator:
+            spoken += (
+                "จุด"
+                + "".join(
+                    cls._DIGIT_WORDS[int(digit)]
+                    for digit in decimal_text
+                )
+            )
+
+        if negative:
+            return "ลบ" + spoken
 
         return spoken
 
