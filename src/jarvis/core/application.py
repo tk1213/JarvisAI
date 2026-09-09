@@ -216,6 +216,9 @@ class JarvisApplication:
                 ai=ai_service.client,
                 definitions=tool_definitions,
                 executor=tool_executor,
+                web_search_enabled=(
+                    settings.openai_web_search_enabled
+                ),
             )
 
             tool_calling_conversation = (

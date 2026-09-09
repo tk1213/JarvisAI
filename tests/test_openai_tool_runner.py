@@ -289,6 +289,33 @@ def test_runner_rejects_invalid_tool_call_limit() -> None:
             max_tool_calls_per_round=0,
         )
 
+@pytest.mark.asyncio
+async def test_runner_exposes_builtin_web_search() -> None:
+    responses = FakeResponsesService(
+        [
+            final_response(),
+        ]
+    )
+
+    runner = OpenAIToolCallingRunner(
+        ai=FakeAI(),  # type: ignore[arg-type]
+        definitions=FakeDefinitions([]),  # type: ignore[arg-type]
+        executor=FakeExecutor(),  # type: ignore[arg-type]
+        responses_service=responses,  # type: ignore[arg-type]
+        web_search_enabled=True,
+    )
+
+    result = await runner.run(
+        "ราคาทองวันนี้เท่าไหร่"
+    )
+
+    assert result.text == "Jarvis is healthy."
+    assert result.tool_results == ()
+    assert responses.calls[0]["tools"] == [
+        {
+            "type": "web_search",
+        }
+    ]
 
 @pytest.mark.asyncio
 async def test_runner_blocks_excessive_calls_in_one_round() -> None:

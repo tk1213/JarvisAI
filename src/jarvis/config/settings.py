@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     openai_timeout_seconds: float = 60.0
     openai_max_retries: int = 2
     openai_max_output_tokens: int | None = None
+    openai_web_search_enabled: bool = False
 
     # ---------------------------------------------------------
     # Smart Home

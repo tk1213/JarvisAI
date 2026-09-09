@@ -37,6 +37,7 @@ class OpenAIToolCallingRunner:
         responses_service: ResponsesService | None = None,
         run_timeout_seconds: float = 30.0,
         max_tool_calls_per_round: int = 8,
+        web_search_enabled: bool = False,
     ) -> None:
         if max_rounds < 1:
             raise ValueError(
@@ -59,7 +60,7 @@ class OpenAIToolCallingRunner:
         self._max_rounds = max_rounds
         self._run_timeout_seconds = run_timeout_seconds
         self._max_tool_calls_per_round = max_tool_calls_per_round
-
+        self._web_search_enabled = web_search_enabled
         self._responses = (
             responses_service
             if responses_service is not None
@@ -123,7 +124,16 @@ class OpenAIToolCallingRunner:
             history=history,
         )
 
-        tools = self._definitions.to_openai_tools()
+        tools = list(
+            self._definitions.to_openai_tools()
+        )
+
+        if self._web_search_enabled:
+            tools.append(
+                {
+                    "type": "web_search",
+                }
+            )
 
         if not tools:
             if voice_mode:
