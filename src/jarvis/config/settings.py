@@ -100,7 +100,7 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------
     tts_model: str = "gpt-4o-mini-tts"
     tts_language: str = "th"
-    tts_speed: float = 1.15
+    tts_speed: float = 1.25
 
     # ---------------------------------------------------------
     # Audio
