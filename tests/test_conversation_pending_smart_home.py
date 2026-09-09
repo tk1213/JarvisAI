@@ -179,7 +179,10 @@ async def test_pending_can_be_cancelled(
         "ไม่เอา"
     )
 
-    assert "ยกเลิก" in reply
+    assert reply == (
+        "ยกเลิกคำสั่งเปิด "
+        "อุปกรณ์ Smart Home แล้วครับ"
+    )
 
     smart_home.turn_on.assert_not_awaited()
     smart_home.turn_off.assert_not_awaited()
@@ -458,7 +461,10 @@ async def test_cancelled_confirmation_does_not_execute(
 
     smart_home.turn_on.assert_not_awaited()
 
-    assert "ยกเลิก" in reply
+    assert reply == (
+        "ยกเลิกคำสั่งเปิด "
+        "Living Room Smart Plug แล้วครับ"
+    )
 
 
 @pytest.mark.asyncio

@@ -242,6 +242,36 @@ class ConversationManager:
 
         return cancelled
 
+    def cancel_pending_smart_home_with_reply(
+        self,
+    ) -> str | None:
+        confirmation = (
+            self._pending_smart_home_confirmation.pending
+        )
+        clarification = self._pending_smart_home.pending
+
+        if confirmation is not None:
+            action_label = self._smart_home_action_label(
+                confirmation.action
+            )
+            reply = (
+                f"ยกเลิกคำสั่ง{action_label} "
+                f"{confirmation.device.name} แล้วครับ"
+            )
+        elif clarification is not None:
+            action_label = self._smart_home_action_label(
+                clarification.action
+            )
+            reply = (
+                f"ยกเลิกคำสั่ง{action_label} "
+                "อุปกรณ์ Smart Home แล้วครับ"
+            )
+        else:
+            return None
+
+        self.cancel_pending_smart_home()
+        return reply
+
     async def ask(
         self,
         text: str,
@@ -1206,14 +1236,46 @@ class ConversationManager:
                 )
             )
 
-            return (
-                f"ต้องการยืนยันคำสั่งกับ {device.name} ใช่ไหมครับ "
-                "พิมพ์ 'ยืนยัน' เพื่อดำเนินการ หรือ 'ยกเลิก' เพื่อยกเลิกครับ"
+            return self._format_smart_home_confirmation(
+                action=action,
+                device=device,
             )
 
         return await self._execute_smart_home_action(
             action=action,
             device=device,
+        )
+
+    @staticmethod
+    def _smart_home_action_label(
+        action: SmartHomeAction,
+    ) -> str:
+        action_labels = {
+            SmartHomeAction.TURN_ON: "เปิด",
+            SmartHomeAction.TURN_OFF: "ปิด",
+            SmartHomeAction.TOGGLE: "สลับสถานะ",
+        }
+
+        return action_labels.get(
+            action,
+            "ดำเนินการกับ",
+        )
+
+    @classmethod
+    def _format_smart_home_confirmation(
+        cls,
+        *,
+        action: SmartHomeAction,
+        device: SmartDevice,
+    ) -> str:
+        action_label = cls._smart_home_action_label(
+            action
+        )
+
+        return (
+            f"ต้องการ{action_label} {device.name} ใช่ไหมครับ "
+            "'ยืนยัน' เพื่อดำเนินการ "
+            "หรือ 'ยกเลิก' ครับ"
         )
 
     async def _handle_pending_smart_home(
@@ -1237,12 +1299,15 @@ class ConversationManager:
         if self._is_cancel_command(
             normalized_text
         ):
-            self._pending_smart_home.clear()
+            reply = self.cancel_pending_smart_home_with_reply()
 
-            return (
-                "ยกเลิกคำสั่ง Smart Home "
-                "แล้วครับ"
-            )
+            if reply is None:
+                return (
+                    "ไม่มีคำสั่ง Smart Home "
+                    "ที่รอการยืนยันครับ"
+                )
+
+            return reply
 
         matches = self._match_pending_candidates(
             normalized_text,
@@ -1267,9 +1332,9 @@ class ConversationManager:
                     )
                 )
 
-                return (
-                    f"ต้องการยืนยันคำสั่งกับ {device.name} ใช่ไหมครับ "
-                    "พิมพ์ 'ยืนยัน' เพื่อดำเนินการ หรือ 'ยกเลิก' เพื่อยกเลิกครับ"
+                return self._format_smart_home_confirmation(
+                    action=action,
+                    device=device,
                 )
 
             return await self._execute_smart_home_action(
@@ -1320,8 +1385,15 @@ class ConversationManager:
             return await self._list_smart_home_devices()
 
         if self._is_cancel_command(normalized_text):
-            self._pending_smart_home_confirmation.clear()
-            return "ยกเลิกคำสั่ง Smart Home แล้วครับ"
+            reply = self.cancel_pending_smart_home_with_reply()
+
+            if reply is None:
+                return (
+                    "ไม่มีคำสั่ง Smart Home "
+                    "ที่รอการยืนยันครับ"
+                )
+
+            return reply
 
         if normalized_text in {
             "ยืนยัน",
@@ -1337,9 +1409,9 @@ class ConversationManager:
                 device=pending.device,
             )
 
-        return (
-            f"คำสั่งสำหรับ {pending.device.name} "
-            "ยังรอการยืนยันครับ พิมพ์ 'ยืนยัน' หรือ 'ยกเลิก' ครับ"
+        return self._format_smart_home_confirmation(
+            action=pending.action,
+            device=pending.device,
         )
 
         # ----------------------------    @classmethod

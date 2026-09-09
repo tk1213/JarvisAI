@@ -396,16 +396,16 @@ class AssistantRuntimeService:
         *,
         speak: bool,
     ) -> bool:
-        cancelled = (
-            self._conversation.cancel_pending_smart_home()
+        reply = (
+            self._conversation.cancel_pending_smart_home_with_reply()
         )
 
-        if not cancelled:
+        if reply is None:
             return False
 
         if speak:
             await self._speak_runtime_reply(
-                "ยกเลิกคำสั่งนี้แล้วครับ คุณ TK",
+                f"{reply} คุณ TK",
                 output="smart_home_cancel.wav",
             )
 

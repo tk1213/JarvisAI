@@ -246,6 +246,49 @@ async def test_runtime_recovery_cancels_pending_smart_home_action() -> None:
     session.set_state.assert_awaited_once()
 
 @pytest.mark.asyncio
+async def test_runtime_speaks_smart_home_cancellation_details() -> None:
+    wake_word = Mock()
+    voice = Mock()
+
+    conversation = Mock()
+    conversation.cancel_pending_smart_home_with_reply = Mock(
+        return_value=(
+            "ยกเลิกคำสั่งปิด "
+            "Smart plug 2 แล้วครับ"
+        )
+    )
+
+    tts = Mock()
+    tts.speak = AsyncMock()
+
+    session = Mock()
+    session.set_state = AsyncMock()
+
+    runtime = AssistantRuntimeService(
+        wake_word=wake_word,
+        voice=voice,
+        conversation=conversation,
+        tts=tts,
+        session=session,
+    )
+
+    cancelled = await runtime._cancel_pending_smart_home(
+        speak=True,
+    )
+
+    assert cancelled is True
+
+    conversation.cancel_pending_smart_home_with_reply.assert_called_once_with()
+
+    tts.speak.assert_awaited_once_with(
+        text=(
+            "ยกเลิกคำสั่งปิด "
+            "Smart plug 2 แล้วครับ คุณ TK"
+        ),
+        output="smart_home_cancel.wav",
+    )
+
+@pytest.mark.asyncio
 async def test_runtime_tts_failure_is_contained_and_session_returns_idle() -> None:
     wake_word = Mock()
     voice = Mock()
