@@ -7,6 +7,9 @@ from pathlib import Path
 
 from jarvis.audio.player import AudioPlayer
 from jarvis.core.logger import log
+from jarvis.speech.thai_text_normalizer import (
+    ThaiSpeechTextNormalizer,
+)
 from jarvis.speech.tts import TextToSpeech
 
 
@@ -25,9 +28,15 @@ class TTSService:
         self,
         player: AudioPlayer,
         tts: TextToSpeech,
+        text_normalizer: ThaiSpeechTextNormalizer | None = None,
     ) -> None:
         self.player = player
         self.tts = tts
+        self._text_normalizer = (
+            text_normalizer
+            if text_normalizer is not None
+            else ThaiSpeechTextNormalizer()
+        )
         self._last_timing: TTSTimingDiagnostics | None = None
 
     @property
@@ -42,6 +51,10 @@ class TTSService:
         output: str = "output.wav",
     ) -> Path:
         total_started = time.perf_counter()
+
+        spoken_text = self._text_normalizer.normalize(
+            text
+        )
 
         output_path = Path(
             output
@@ -65,7 +78,7 @@ class TTSService:
             generation_started = time.perf_counter()
 
             audio_file = await self.tts.generate(
-                text=text,
+                text=spoken_text,
                 output=output,
             )
 
@@ -194,7 +207,11 @@ class TTSService:
         text: str,
         output: str = "output.wav",
     ) -> Path:
+        spoken_text = self._text_normalizer.normalize(
+            text
+        )
+
         return await self.tts.generate(
-            text=text,
+            text=spoken_text,
             output=output,
         )
