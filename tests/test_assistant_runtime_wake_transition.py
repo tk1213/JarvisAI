@@ -19,9 +19,15 @@ async def test_wake_cycle_acknowledges_before_listening() -> None:
     )
 
     voice = Mock()
-    voice.listen_for_text = AsyncMock(
-        side_effect=lambda **kwargs: events.append("listen") or ""
-    )
+
+    def listen_for_text(
+        **_: object,
+    ) -> str:
+        events.append("listen")
+        runtime.stop()
+        return ""
+
+    voice.listen_for_text = AsyncMock(side_effect=listen_for_text)
 
     conversation = Mock()
     conversation.has_pending_smart_home = False
@@ -46,9 +52,7 @@ async def test_wake_cycle_acknowledges_before_listening() -> None:
 
     runtime._acknowledge_wake = acknowledge  # type: ignore[method-assign]
 
-    await runtime._run_wake_cycle(
-        language="th"
-    )
+    await runtime._run_wake_cycle(language="th")
 
     assert events == [
         "wake",
@@ -73,18 +77,15 @@ async def test_stopped_runtime_does_not_acknowledge_after_wake() -> None:
         runtime.stop()
         return 0.95
 
-    wake_word.wait_for_wake_word = AsyncMock(
-        side_effect=detect_and_stop
-    )
+    wake_word.wait_for_wake_word = AsyncMock(side_effect=detect_and_stop)
     runtime._acknowledge_wake = AsyncMock()  # type: ignore[method-assign]
 
     runtime._running = True
 
-    await runtime._run_wake_cycle(
-        language="th"
-    )
+    await runtime._run_wake_cycle(language="th")
 
     runtime._acknowledge_wake.assert_not_awaited()  # type: ignore[attr-defined]
+
 
 @pytest.mark.asyncio
 async def test_runtime_recovers_from_cycle_error_and_runs_next_cycle() -> None:
@@ -119,9 +120,7 @@ async def test_runtime_recovers_from_cycle_error_and_runs_next_cycle() -> None:
         cycle_count += 1
 
         if cycle_count == 1:
-            raise RuntimeError(
-                "controlled cycle failure"
-            )
+            raise RuntimeError("controlled cycle failure")
 
         runtime.stop()
 
@@ -136,6 +135,7 @@ async def test_runtime_recovers_from_cycle_error_and_runs_next_cycle() -> None:
 
     session.set_state.assert_awaited_once()
 
+
 @pytest.mark.asyncio
 async def test_runtime_recovery_survives_session_reset_failure() -> None:
     wake_word = Mock()
@@ -146,9 +146,7 @@ async def test_runtime_recovery_survives_session_reset_failure() -> None:
 
     conversation.has_pending_smart_home = False
     session.set_state = AsyncMock(
-        side_effect=RuntimeError(
-            "controlled session reset failure"
-        )
+        side_effect=RuntimeError("controlled session reset failure")
     )
 
     runtime = AssistantRuntimeService(
@@ -173,9 +171,7 @@ async def test_runtime_recovery_survives_session_reset_failure() -> None:
         cycle_count += 1
 
         if cycle_count == 1:
-            raise RuntimeError(
-                "controlled cycle failure"
-            )
+            raise RuntimeError("controlled cycle failure")
 
         runtime.stop()
 
@@ -189,6 +185,7 @@ async def test_runtime_recovery_survives_session_reset_failure() -> None:
     assert runtime.running is False
     assert session.set_state.await_count == 1
 
+
 @pytest.mark.asyncio
 async def test_runtime_recovery_cancels_pending_smart_home_action() -> None:
     wake_word = Mock()
@@ -198,9 +195,7 @@ async def test_runtime_recovery_cancels_pending_smart_home_action() -> None:
     session = Mock()
 
     conversation.has_pending_smart_home = True
-    conversation.cancel_pending_smart_home = Mock(
-        return_value=True
-    )
+    conversation.cancel_pending_smart_home = Mock(return_value=True)
 
     session.set_state = AsyncMock()
 
@@ -226,9 +221,7 @@ async def test_runtime_recovery_cancels_pending_smart_home_action() -> None:
         cycle_count += 1
 
         if cycle_count == 1:
-            raise RuntimeError(
-                "controlled cycle failure"
-            )
+            raise RuntimeError("controlled cycle failure")
 
         runtime.stop()
 
@@ -245,6 +238,7 @@ async def test_runtime_recovery_cancels_pending_smart_home_action() -> None:
 
     session.set_state.assert_awaited_once()
 
+
 @pytest.mark.asyncio
 async def test_runtime_speaks_smart_home_cancellation_details() -> None:
     wake_word = Mock()
@@ -252,10 +246,7 @@ async def test_runtime_speaks_smart_home_cancellation_details() -> None:
 
     conversation = Mock()
     conversation.cancel_pending_smart_home_with_reply = Mock(
-        return_value=(
-            "ยกเลิกคำสั่งปิด "
-            "Smart plug 2 แล้วครับ"
-        )
+        return_value=("ยกเลิกคำสั่งปิด Smart plug 2 แล้วครับ")
     )
 
     tts = Mock()
@@ -281,12 +272,10 @@ async def test_runtime_speaks_smart_home_cancellation_details() -> None:
     conversation.cancel_pending_smart_home_with_reply.assert_called_once_with()
 
     tts.speak.assert_awaited_once_with(
-        text=(
-            "ยกเลิกคำสั่งปิด "
-            "Smart plug 2 แล้วครับ คุณ TK"
-        ),
+        text=("ยกเลิกคำสั่งปิด Smart plug 2 แล้วครับ คุณ TK"),
         output="smart_home_cancel.wav",
     )
+
 
 @pytest.mark.asyncio
 async def test_runtime_tts_failure_is_contained_and_session_returns_idle() -> None:
@@ -297,11 +286,7 @@ async def test_runtime_tts_failure_is_contained_and_session_returns_idle() -> No
     conversation.has_pending_smart_home = False
 
     tts = Mock()
-    tts.speak = AsyncMock(
-        side_effect=RuntimeError(
-            "controlled TTS failure"
-        )
-    )
+    tts.speak = AsyncMock(side_effect=RuntimeError("controlled TTS failure"))
 
     session = Mock()
     session.set_state = AsyncMock()
@@ -327,22 +312,15 @@ async def test_runtime_tts_failure_is_contained_and_session_returns_idle() -> No
 
     assert session.set_state.await_count == 2
 
-    assert (
-        session.set_state.await_args_list[0].args[0]
-        == SessionState.SPEAKING
-    )
+    assert session.set_state.await_args_list[0].args[0] == SessionState.SPEAKING
 
-    assert (
-        session.set_state.await_args_list[1].args[0]
-        == SessionState.IDLE
-    )
+    assert session.set_state.await_args_list[1].args[0] == SessionState.IDLE
+
 
 @pytest.mark.asyncio
 async def test_runtime_handles_cancellation_without_recovery() -> None:
     wake_word = Mock()
-    wake_word.wait_for_wake_word = AsyncMock(
-        side_effect=asyncio.CancelledError()
-    )
+    wake_word.wait_for_wake_word = AsyncMock(side_effect=asyncio.CancelledError())
 
     voice = Mock()
     conversation = Mock()
@@ -360,9 +338,7 @@ async def test_runtime_handles_cancellation_without_recovery() -> None:
 
     runtime._recover_from_cycle_error = AsyncMock()  # type: ignore[method-assign]
 
-    with pytest.raises(
-        asyncio.CancelledError
-    ):
+    with pytest.raises(asyncio.CancelledError):
         await runtime.run(
             language="th",
         )
@@ -372,6 +348,7 @@ async def test_runtime_handles_cancellation_without_recovery() -> None:
     wake_word.wait_for_wake_word.assert_awaited_once_with()
 
     assert runtime.running is False
+
 
 @pytest.mark.asyncio
 async def test_follow_up_timeout_waits_for_voice_cancellation_cleanup() -> None:
@@ -414,7 +391,6 @@ async def test_follow_up_timeout_waits_for_voice_cancellation_cleanup() -> None:
         tts=tts,
         session=session,
         follow_up_timeout=0.01,
-        max_follow_up_turns=1,
         error_retry_delay=0.0,
     )
 
@@ -427,6 +403,7 @@ async def test_follow_up_timeout_waits_for_voice_cancellation_cleanup() -> None:
     assert cleanup_complete.is_set()
     assert voice.listen_for_text.await_count == 1
 
+
 @pytest.mark.asyncio
 async def test_runtime_propagates_caller_cancellation() -> None:
     wake_started = asyncio.Event()
@@ -437,9 +414,7 @@ async def test_runtime_propagates_caller_cancellation() -> None:
         wake_started.set()
         await asyncio.Future()
 
-    wake_word.wait_for_wake_word = AsyncMock(
-        side_effect=wait_for_wake_word
-    )
+    wake_word.wait_for_wake_word = AsyncMock(side_effect=wait_for_wake_word)
 
     voice = Mock()
     conversation = Mock()
@@ -456,20 +431,17 @@ async def test_runtime_propagates_caller_cancellation() -> None:
         session=session,
     )
 
-    task = asyncio.create_task(
-        runtime.run()
-    )
+    task = asyncio.create_task(runtime.run())
 
     await wake_started.wait()
 
     task.cancel()
 
-    with pytest.raises(
-        asyncio.CancelledError
-    ):
+    with pytest.raises(asyncio.CancelledError):
         await task
 
     assert runtime.running is False
+
 
 @pytest.mark.asyncio
 async def test_runtime_cancellation_completes_cleanup_before_propagating() -> None:
@@ -481,9 +453,7 @@ async def test_runtime_cancellation_completes_cleanup_before_propagating() -> No
         wake_started.set()
         await asyncio.Future()
 
-    wake_word.wait_for_wake_word = AsyncMock(
-        side_effect=wait_for_wake_word
-    )
+    wake_word.wait_for_wake_word = AsyncMock(side_effect=wait_for_wake_word)
 
     session = Mock()
     session.set_state = AsyncMock()
@@ -496,9 +466,7 @@ async def test_runtime_cancellation_completes_cleanup_before_propagating() -> No
         session=session,
     )
 
-    task = asyncio.create_task(
-        runtime.run()
-    )
+    task = asyncio.create_task(runtime.run())
 
     await wake_started.wait()
 
@@ -508,3 +476,95 @@ async def test_runtime_cancellation_completes_cleanup_before_propagating() -> No
         await task
 
     assert runtime.running is False
+
+
+@pytest.mark.asyncio
+async def test_continuous_conversation_accepts_more_than_three_commands() -> None:
+    wake_word = Mock()
+    voice = Mock()
+
+    conversation = Mock()
+    conversation.has_pending_smart_home = False
+
+    tts = Mock()
+    session = Mock()
+
+    commands = iter(
+        (
+            "คำสั่งที่ 1",
+            "คำสั่งที่ 2",
+            "คำสั่งที่ 3",
+            "คำสั่งที่ 4",
+        )
+    )
+
+    async def listen_for_text(
+        *,
+        language: str,
+    ) -> str:
+        assert language == "th"
+
+        text = next(commands)
+
+        if text == "คำสั่งที่ 4":
+            runtime.stop()
+
+        return text
+
+    voice.listen_for_text = AsyncMock(side_effect=listen_for_text)
+    voice.reply_to_text = AsyncMock(return_value="ดำเนินการแล้วครับ")
+
+    runtime = AssistantRuntimeService(
+        wake_word=wake_word,
+        voice=voice,
+        conversation=conversation,
+        tts=tts,
+        session=session,
+        follow_up_timeout=0.1,
+    )
+    runtime._running = True
+
+    await runtime._handle_follow_up_window(
+        language="th",
+    )
+
+    assert voice.listen_for_text.await_count == 4
+    assert voice.reply_to_text.await_count == 4
+
+
+@pytest.mark.asyncio
+async def test_repeated_empty_speech_does_not_reset_inactivity_timeout() -> None:
+    wake_word = Mock()
+    voice = Mock()
+
+    async def no_speech(
+        *,
+        language: str,
+    ) -> str:
+        assert language == "th"
+        await asyncio.sleep(0)
+        return ""
+
+    voice.listen_for_text = AsyncMock(side_effect=no_speech)
+
+    conversation = Mock()
+    conversation.has_pending_smart_home = False
+
+    runtime = AssistantRuntimeService(
+        wake_word=wake_word,
+        voice=voice,
+        conversation=conversation,
+        tts=Mock(),
+        session=Mock(),
+        follow_up_timeout=0.01,
+    )
+    runtime._running = True
+
+    await asyncio.wait_for(
+        runtime._handle_follow_up_window(
+            language="th",
+        ),
+        timeout=0.5,
+    )
+
+    assert voice.listen_for_text.await_count > 1

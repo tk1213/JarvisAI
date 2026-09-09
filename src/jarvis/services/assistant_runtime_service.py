@@ -21,37 +21,14 @@ class AssistantRuntimeService:
         conversation: ConversationManager,
         tts: TTSService,
         session: SessionManager,
-        follow_up_timeout: float = 12.0,
-        max_follow_up_turns: int = 3,
-        max_silence_retries: int = 2,
-        max_clarification_silence_retries: int = 2,
+        follow_up_timeout: float = 20.0,
         error_retry_delay: float = 1.0,
     ) -> None:
         if follow_up_timeout <= 0:
-            raise ValueError(
-                "follow_up_timeout must be greater than zero."
-            )
-
-        if max_follow_up_turns < 0:
-            raise ValueError(
-                "max_follow_up_turns cannot be negative."
-            )
-
-        if max_silence_retries < 1:
-            raise ValueError(
-                "max_silence_retries must be at least 1."
-            )
-
-        if max_clarification_silence_retries < 1:
-            raise ValueError(
-                "max_clarification_silence_retries "
-                "must be at least 1."
-            )
+            raise ValueError("follow_up_timeout must be greater than zero.")
 
         if error_retry_delay < 0:
-            raise ValueError(
-                "error_retry_delay cannot be negative."
-            )
+            raise ValueError("error_retry_delay cannot be negative.")
 
         self._wake_word = wake_word
         self._voice = voice
@@ -60,11 +37,6 @@ class AssistantRuntimeService:
         self._session = session
 
         self._follow_up_timeout = follow_up_timeout
-        self._max_follow_up_turns = max_follow_up_turns
-        self._max_silence_retries = max_silence_retries
-        self._max_clarification_silence_retries = (
-            max_clarification_silence_retries
-        )
         self._error_retry_delay = error_retry_delay
 
         self._running = False
@@ -77,29 +49,13 @@ class AssistantRuntimeService:
     def follow_up_timeout(self) -> float:
         return self._follow_up_timeout
 
-    @property
-    def max_follow_up_turns(self) -> int:
-        return self._max_follow_up_turns
-
-    @property
-    def max_silence_retries(self) -> int:
-        return self._max_silence_retries
-
-    @property
-    def max_clarification_silence_retries(
-        self,
-    ) -> int:
-        return self._max_clarification_silence_retries
-
     async def run(
         self,
         *,
         language: str = "th",
     ) -> None:
         if self._running:
-            raise RuntimeError(
-                "Assistant runtime is already running."
-            )
+            raise RuntimeError("Assistant runtime is already running.")
 
         self._running = True
 
@@ -108,10 +64,7 @@ class AssistantRuntimeService:
         print(" JarvisAI Voice Assistant")
         print("=" * 60)
         print()
-        print(
-            'Jarvis is ready. Say "Hey Jarvis" '
-            "to start."
-        )
+        print('Jarvis is ready. Say "Hey Jarvis" to start.')
 
         try:
             while self._running:
@@ -124,9 +77,7 @@ class AssistantRuntimeService:
                     raise
 
                 except Exception as exc:  # noqa: BLE001
-                    await self._recover_from_cycle_error(
-                        exc
-                    )
+                    await self._recover_from_cycle_error(exc)
 
         except asyncio.CancelledError:
             self._running = False
@@ -136,9 +87,7 @@ class AssistantRuntimeService:
             self._running = False
 
             print()
-            print(
-                "Jarvis voice assistant stopped."
-            )
+            print("Jarvis voice assistant stopped.")
 
     def stop(self) -> None:
         self._running = False
@@ -150,23 +99,16 @@ class AssistantRuntimeService:
     ) -> None:
         print()
         print("-" * 60)
-        print(
-            'Waiting for wake word: "Hey Jarvis"...'
-        )
+        print('Waiting for wake word: "Hey Jarvis"...')
         print("-" * 60)
 
-        score = (
-            await self._wake_word.wait_for_wake_word()
-        )
+        score = await self._wake_word.wait_for_wake_word()
 
         if not self._running:
             return
 
         print()
-        print(
-            "Wake word detected "
-            f"(score={score:.4f})"
-        )
+        print(f"Wake word detected (score={score:.4f})")
 
         await self._acknowledge_wake()
 
@@ -193,34 +135,29 @@ class AssistantRuntimeService:
         print()
         print("Listening for command...")
 
-        text = await self._voice.listen_for_text(
+        text = await self._listen_until_inactive(
             language=language,
         )
 
-        if not text:
+        if text is None:
             print()
             print(
-                "No command detected. "
+                "No command detected for "
+                f"{self._follow_up_timeout:.0f} seconds. "
                 "Returning to wake mode."
             )
             return
 
-        if await self._handle_session_end_command(
-            text
-        ):
+        if await self._handle_session_end_command(text):
             return
 
-        reply = await self._voice.reply_to_text(
-            text
-        )
+        reply = await self._voice.reply_to_text(text)
 
         if not reply:
             return
 
-        clarification_completed = (
-            await self._handle_pending_clarification(
-                language=language,
-            )
+        clarification_completed = await self._handle_pending_clarification(
+            language=language,
         )
 
         if not clarification_completed:
@@ -234,69 +171,72 @@ class AssistantRuntimeService:
         )
 
         print()
-        print(
-            "Conversation complete. "
-            "Returning to wake mode."
-        )
+        print("Conversation complete. Returning to wake mode.")
+
+    async def _listen_until_inactive(
+        self,
+        *,
+        language: str,
+    ) -> str | None:
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self._follow_up_timeout
+
+        while self._running:
+            remaining = deadline - loop.time()
+
+            if remaining <= 0:
+                return None
+
+            try:
+                text = await asyncio.wait_for(
+                    self._voice.listen_for_text(
+                        language=language,
+                    ),
+                    timeout=remaining,
+                )
+
+            except TimeoutError:
+                return None
+
+            if text:
+                return text
+
+        return None
 
     async def _handle_pending_clarification(
         self,
         *,
         language: str,
     ) -> bool:
-        silence_count = 0
-
-        while (
-            self._running
-            and self._conversation.has_pending_smart_home
-        ):
+        while self._running and self._conversation.has_pending_smart_home:
             print()
             print(
-                "Waiting for clarification..."
+                "Waiting for clarification "
+                f"for up to "
+                f"{self._follow_up_timeout:.0f} seconds..."
             )
 
-            text = await self._voice.listen_for_text(
+            text = await self._listen_until_inactive(
                 language=language,
             )
 
-            if not text:
-                silence_count += 1
-
-                if (
-                    silence_count
-                    >= self._max_clarification_silence_retries
-                ):
-                    await self._cancel_pending_smart_home(
-                        speak=True,
-                    )
-                    return False
-
-                print()
-                print(
-                    "No clarification detected. "
-                    "Listening once more..."
-                )
-                continue
-
-            silence_count = 0
-
-            if self._is_cancel_command(
-                text
-            ):
+            if text is None:
                 await self._cancel_pending_smart_home(
                     speak=True,
                 )
                 return False
 
-            if await self._handle_session_end_command(
-                text
-            ):
+            if self._is_cancel_command(text):
+                await self._cancel_pending_smart_home(
+                    speak=True,
+                )
+                return False
+
+            if await self._handle_session_end_command(text):
                 self._conversation.cancel_pending_smart_home()
                 return False
 
-            await self._voice.reply_to_text(
-                text
-            )
+            await self._voice.reply_to_text(text)
 
         return True
 
@@ -305,84 +245,38 @@ class AssistantRuntimeService:
         *,
         language: str,
     ) -> None:
-        if self._max_follow_up_turns == 0:
-            return
-
-        silence_count = 0
-
-        for turn in range(
-            1,
-            self._max_follow_up_turns + 1,
-        ):
-            if not self._running:
-                return
-
+        while self._running:
             print()
             print(
-                "Follow-up listening "
-                f"({turn}/{self._max_follow_up_turns})..."
+                "Listening for another command. "
+                f"Stay quiet for "
+                f"{self._follow_up_timeout:.0f} seconds "
+                "to return to wake mode."
             )
 
-            print(
-                "Speak another command, "
-                f"or stay quiet for "
-                f"{self._follow_up_timeout:.0f} seconds."
+            text = await self._listen_until_inactive(
+                language=language,
             )
 
-            try:
-                text = await asyncio.wait_for(
-                    self._voice.listen_for_text(
-                        language=language,
-                    ),
-                    timeout=self._follow_up_timeout,
-                )
-
-            except TimeoutError:
+            if text is None:
                 print()
                 print(
-                    "Follow-up window expired."
+                    "No command detected for "
+                    f"{self._follow_up_timeout:.0f} seconds. "
+                    "Returning to wake mode."
                 )
                 return
 
-            if not text:
-                silence_count += 1
-
-                if (
-                    silence_count
-                    >= self._max_silence_retries
-                ):
-                    print()
-                    print(
-                        "No usable speech detected. "
-                        "Returning to wake mode."
-                    )
-                    return
-
-                print()
-                print(
-                    "No speech detected. "
-                    "Listening once more..."
-                )
-                continue
-
-            silence_count = 0
-
-            if await self._handle_session_end_command(
-                text
-            ):
+            if await self._handle_session_end_command(text):
                 return
 
-            reply = await self._voice.reply_to_text(
-                text
-            )
+            reply = await self._voice.reply_to_text(text)
 
             if not reply:
                 continue
 
-            clarification_completed = (
-                await self._handle_pending_clarification(
-                    language=language,
-                )
+            clarification_completed = await self._handle_pending_clarification(
+                language=language,
             )
 
             if not clarification_completed:
@@ -396,9 +290,7 @@ class AssistantRuntimeService:
         *,
         speak: bool,
     ) -> bool:
-        reply = (
-            self._conversation.cancel_pending_smart_home_with_reply()
-        )
+        reply = self._conversation.cancel_pending_smart_home_with_reply()
 
         if reply is None:
             return False
@@ -415,9 +307,7 @@ class AssistantRuntimeService:
         self,
         text: str,
     ) -> bool:
-        response = self._session_end_response(
-            text
-        )
+        response = self._session_end_response(text)
 
         if response is None:
             return False
@@ -437,9 +327,7 @@ class AssistantRuntimeService:
         cls,
         text: str,
     ) -> str | None:
-        normalized = cls._normalize_text(
-            text
-        )
+        normalized = cls._normalize_text(text)
 
         thank_you_phrases = {
             "ขอบคุณ",
@@ -474,9 +362,7 @@ class AssistantRuntimeService:
         cls,
         text: str,
     ) -> bool:
-        normalized = cls._normalize_text(
-            text
-        )
+        normalized = cls._normalize_text(text)
 
         cancel_phrases = {
             "ยกเลิก",
@@ -518,18 +404,10 @@ class AssistantRuntimeService:
             )
 
         print()
-        print(
-            "Jarvis: เกิดข้อผิดพลาดชั่วคราวครับ "
-            "ระบบจะกลับไปรอคำสั่งใหม่"
-        )
+        print("Jarvis: เกิดข้อผิดพลาดชั่วคราวครับ ระบบจะกลับไปรอคำสั่งใหม่")
 
-        if (
-            self._running
-            and self._error_retry_delay > 0
-        ):
-            await asyncio.sleep(
-                self._error_retry_delay
-            )
+        if self._running and self._error_retry_delay > 0:
+            await asyncio.sleep(self._error_retry_delay)
 
     async def _speak_runtime_reply(
         self,
@@ -538,9 +416,7 @@ class AssistantRuntimeService:
         output: str,
     ) -> None:
         print()
-        print(
-            f"Jarvis: {text}"
-        )
+        print(f"Jarvis: {text}")
 
         await self._session.set_state(
             SessionState.SPEAKING,
@@ -560,9 +436,7 @@ class AssistantRuntimeService:
                 )
 
                 print()
-                print(
-                    "[TTS unavailable - continuing without audio]"
-                )
+                print("[TTS unavailable - continuing without audio]")
 
         finally:
             await self._session.set_state(
@@ -578,10 +452,7 @@ class AssistantRuntimeService:
             text,
         )
 
-        normalized = (
-            normalized.lower()
-            .strip()
-        )
+        normalized = normalized.lower().strip()
 
         normalized = normalized.replace(
             "\u0e4d\u0e32",
@@ -602,11 +473,6 @@ class AssistantRuntimeService:
         )
 
         for character in punctuation:
-            normalized = normalized.replace(
-                character,
-                ""
-            )
+            normalized = normalized.replace(character, "")
 
-        return " ".join(
-            normalized.split()
-        )
+        return " ".join(normalized.split())
