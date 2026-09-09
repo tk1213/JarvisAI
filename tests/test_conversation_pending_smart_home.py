@@ -261,8 +261,18 @@ async def test_pending_is_cleared_after_execution(
     assert manager._router.route.call_count == 2
 
 
+@pytest.mark.parametrize(
+    "selection_text",
+    (
+        "สมาร์ทปลั๊กสอง",
+        "สวิตช์ปากสอง",
+        "สมาร์ทปากสอง",
+    ),
+)
 @pytest.mark.asyncio
-async def test_thai_spoken_number_selects_smart_plug_2() -> None:
+async def test_thai_spoken_number_selects_smart_plug_2(
+    selection_text: str,
+) -> None:
     ai = Mock()
     ai.ask = AsyncMock(
         return_value="AI reply"
@@ -338,7 +348,7 @@ async def test_thai_spoken_number_selects_smart_plug_2() -> None:
     smart_home.turn_on.assert_not_awaited()
 
     second_reply = await manager.ask(
-        "สมาร์ทปลั๊กสอง"
+        selection_text
     )
 
     smart_home.turn_on.assert_not_awaited()
