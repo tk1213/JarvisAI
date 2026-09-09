@@ -27,15 +27,9 @@ class ThaiSpeechTextNormalizer:
         "แสน",
     )
 
-    _PARENTHESIZED_MARKDOWN_LINK = re.compile(
-        r"\s*\(\[[^\]]+\]\(https?://[^)]+\)\)"
-    )
-    _MARKDOWN_LINK = re.compile(
-        r"\[([^\]]+)\]\(https?://[^)]+\)"
-    )
-    _RAW_URL = re.compile(
-        r"https?://\S+"
-    )
+    _PARENTHESIZED_MARKDOWN_LINK = re.compile(r"\s*\(\[[^\]]+\]\(https?://[^)]+\)\)")
+    _MARKDOWN_LINK = re.compile(r"\[([^\]]+)\]\(https?://[^)]+\)")
+    _RAW_URL = re.compile(r"https?://\S+")
 
     _TIME_WITH_SUFFIX = re.compile(
         r"(?<!\d)"
@@ -77,6 +71,12 @@ class ThaiSpeechTextNormalizer:
         r"(ดอลลาร์สหรัฐ|ดอลลาร์)"
     )
 
+    _PERCENTAGE = re.compile(
+        r"(?<![\d.,])"
+        r"(-?\d+(?:\.\d+)?)"
+        r"\s*%"
+    )
+
     def normalize(
         self,
         text: str,
@@ -112,14 +112,16 @@ class ThaiSpeechTextNormalizer:
             self._replace_dollar_amount,
             normalized,
         )
+        normalized = self._PERCENTAGE.sub(
+            self._replace_percentage,
+            normalized,
+        )
         normalized = self._MONEY.sub(
             self._replace_money,
             normalized,
         )
 
-        return " ".join(
-            normalized.split()
-        )
+        return " ".join(normalized.split())
 
     @classmethod
     def number_to_thai_words(
@@ -127,12 +129,7 @@ class ThaiSpeechTextNormalizer:
         value: int,
     ) -> str:
         if value < 0:
-            return (
-                "ลบ"
-                + cls.number_to_thai_words(
-                    abs(value)
-                )
-            )
+            return "ลบ" + cls.number_to_thai_words(abs(value))
 
         if value == 0:
             return cls._DIGIT_WORDS[0]
@@ -143,23 +140,14 @@ class ThaiSpeechTextNormalizer:
                 1_000_000,
             )
 
-            words = (
-                cls.number_to_thai_words(
-                    millions
-                )
-                + "ล้าน"
-            )
+            words = cls.number_to_thai_words(millions) + "ล้าน"
 
             if remainder:
-                words += cls.number_to_thai_words(
-                    remainder
-                )
+                words += cls.number_to_thai_words(remainder)
 
             return words
 
-        return cls._number_below_million(
-            value
-        )
+        return cls._number_below_million(value)
 
     @classmethod
     def _number_below_million(
@@ -170,9 +158,7 @@ class ThaiSpeechTextNormalizer:
         length = len(digits)
         words: list[str] = []
 
-        for index, character in enumerate(
-            digits
-        ):
+        for index, character in enumerate(digits):
             digit = int(character)
 
             if digit == 0:
@@ -184,9 +170,7 @@ class ThaiSpeechTextNormalizer:
                 if digit == 1 and value > 10:
                     words.append("เอ็ด")
                 else:
-                    words.append(
-                        cls._DIGIT_WORDS[digit]
-                    )
+                    words.append(cls._DIGIT_WORDS[digit])
 
             elif position == 1:
                 if digit == 1:
@@ -194,21 +178,13 @@ class ThaiSpeechTextNormalizer:
                 elif digit == 2:
                     words.append("ยี่")
                 else:
-                    words.append(
-                        cls._DIGIT_WORDS[digit]
-                    )
+                    words.append(cls._DIGIT_WORDS[digit])
 
-                words.append(
-                    cls._POSITION_WORDS[position]
-                )
+                words.append(cls._POSITION_WORDS[position])
 
             else:
-                words.append(
-                    cls._DIGIT_WORDS[digit]
-                )
-                words.append(
-                    cls._POSITION_WORDS[position]
-                )
+                words.append(cls._DIGIT_WORDS[digit])
+                words.append(cls._POSITION_WORDS[position])
 
         return "".join(words)
 
@@ -220,19 +196,10 @@ class ThaiSpeechTextNormalizer:
         hour = int(match.group(1))
         minute = int(match.group(2))
 
-        spoken = (
-            cls.number_to_thai_words(hour)
-            + "นาฬิกา"
-        )
+        spoken = cls.number_to_thai_words(hour) + "นาฬิกา"
 
         if minute:
-            spoken += (
-                " "
-                + cls.number_to_thai_words(
-                    minute
-                )
-                + "นาที"
-            )
+            spoken += " " + cls.number_to_thai_words(minute) + "นาที"
 
         return spoken
 
@@ -241,16 +208,10 @@ class ThaiSpeechTextNormalizer:
         cls,
         match: Match[str],
     ) -> str:
-        value = cls._number_text_to_words(
-            match.group(1)
-        )
+        value = cls._number_text_to_words(match.group(1))
         scale = match.group(2).lower()
 
-        unit = (
-            "องศาเซลเซียส"
-            if scale == "c"
-            else "องศาฟาเรนไฮต์"
-        )
+        unit = "องศาเซลเซียส" if scale == "c" else "องศาฟาเรนไฮต์"
 
         return value + unit
 
@@ -266,17 +227,11 @@ class ThaiSpeechTextNormalizer:
         decimal_text = match.group(2)
         currency = match.group(3)
 
-        spoken = cls.number_to_thai_words(
-            int(integer_text)
-        )
+        spoken = cls.number_to_thai_words(int(integer_text))
 
         if decimal_text:
-            spoken += (
-                "จุด"
-                + "".join(
-                    cls._DIGIT_WORDS[int(digit)]
-                    for digit in decimal_text
-                )
+            spoken += "จุด" + "".join(
+                cls._DIGIT_WORDS[int(digit)] for digit in decimal_text
             )
 
         return spoken + currency
@@ -289,27 +244,28 @@ class ThaiSpeechTextNormalizer:
         negative = value.startswith("-")
         unsigned = value.removeprefix("-")
 
-        integer_text, separator, decimal_text = (
-            unsigned.partition(".")
-        )
+        integer_text, separator, decimal_text = unsigned.partition(".")
 
-        spoken = cls.number_to_thai_words(
-            int(integer_text)
-        )
+        spoken = cls.number_to_thai_words(int(integer_text))
 
         if separator:
-            spoken += (
-                "จุด"
-                + "".join(
-                    cls._DIGIT_WORDS[int(digit)]
-                    for digit in decimal_text
-                )
+            spoken += "จุด" + "".join(
+                cls._DIGIT_WORDS[int(digit)] for digit in decimal_text
             )
 
         if negative:
             return "ลบ" + spoken
 
         return spoken
+
+    @classmethod
+    def _replace_percentage(
+        cls,
+        match: Match[str],
+    ) -> str:
+        value = cls._number_text_to_words(match.group(1))
+
+        return value + "เปอร์เซ็นต์"
 
     @classmethod
     def _replace_money(
@@ -324,10 +280,7 @@ class ThaiSpeechTextNormalizer:
         )
         satang_text = match.group(2)
 
-        spoken = (
-            cls.number_to_thai_words(baht)
-            + "บาท"
-        )
+        spoken = cls.number_to_thai_words(baht) + "บาท"
 
         if satang_text is not None:
             satang = int(
@@ -338,11 +291,6 @@ class ThaiSpeechTextNormalizer:
             )
 
             if satang:
-                spoken += (
-                    cls.number_to_thai_words(
-                        satang
-                    )
-                    + "สตางค์"
-                )
+                spoken += cls.number_to_thai_words(satang) + "สตางค์"
 
         return spoken
