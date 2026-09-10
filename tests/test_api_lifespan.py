@@ -27,6 +27,9 @@ async def test_production_api_uses_headless_lifecycle() -> None:
             "database": True,
         }
     )
+    health.is_operationally_ready = AsyncMock(
+        return_value=True,
+    )
 
     services = Mock(
         spec=ServiceContainer,
@@ -42,14 +45,13 @@ async def test_production_api_uses_headless_lifecycle() -> None:
         app=app,
     )
 
-    async with app.router.lifespan_context(app):
-        async with AsyncClient(
-            transport=transport,
-            base_url="http://test",
-        ) as client:
-            response = await client.get(
-                "/api/v1/health"
-            )
+    async with app.router.lifespan_context(app), AsyncClient(
+        transport=transport,
+        base_url="http://test",
+    ) as client:
+        response = await client.get(
+            "/api/v1/health"
+        )
 
     assert response.status_code == 200
     assert response.json() == {
@@ -60,7 +62,7 @@ async def test_production_api_uses_headless_lifecycle() -> None:
     }
 
     application.start.assert_awaited_once_with(
-        start_background_tasks=False,
+        start_background_tasks=True,
         include_voice=False,
     )
     application.shutdown.assert_awaited_once_with()
@@ -69,7 +71,9 @@ async def test_production_api_uses_headless_lifecycle() -> None:
         "health",
         HealthService,
     )
+
     health.check.assert_awaited_once_with()
+    health.is_operationally_ready.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio
@@ -99,6 +103,11 @@ async def test_production_api_does_not_shutdown_after_failed_start() -> None:
     ):
         async with app.router.lifespan_context(app):
             pass
+
+    application.start.assert_awaited_once_with(
+        start_background_tasks=True,
+        include_voice=False,
+    )
 
     application.shutdown.assert_not_awaited()
     services.resolve.assert_not_called()
@@ -132,7 +141,7 @@ async def test_production_api_shuts_down_after_service_resolution_failure(
             pass
 
     application.start.assert_awaited_once_with(
-        start_background_tasks=False,
+        start_background_tasks=True,
         include_voice=False,
     )
     application.shutdown.assert_awaited_once_with()

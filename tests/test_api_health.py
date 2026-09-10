@@ -43,6 +43,11 @@ async def test_health_endpoint(
     health.check = AsyncMock(
         return_value=checks,
     )
+    health.is_operationally_ready = AsyncMock(
+        return_value=(
+            expected_status == "healthy"
+        ),
+    )
 
     app = create_api_app(
         health=health,
@@ -67,3 +72,4 @@ async def test_health_endpoint(
     }
 
     health.check.assert_awaited_once_with()
+    health.is_operationally_ready.assert_awaited_once_with()

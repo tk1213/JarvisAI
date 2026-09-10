@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 
+from jarvis.api import run_api_server
 from jarvis.audio.manager import AudioManager
 from jarvis.config.audio_device_config import AudioDeviceConfig
 from jarvis.main import audio_devices, chat, doctor, run
@@ -76,6 +77,11 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     subparsers.add_parser(
+        "api",
+        help="Start the JarvisAI read-only API",
+    )
+
+    subparsers.add_parser(
         "chat",
         help="Chat with JarvisAI",
     )
@@ -139,6 +145,9 @@ def main() -> None:
 
         elif command == "chat":
             asyncio.run(chat())
+
+        elif command == "api":
+            run_api_server()
 
         elif command == "doctor":
             healthy = asyncio.run(doctor())

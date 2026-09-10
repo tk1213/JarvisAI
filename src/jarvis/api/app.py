@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
-from typing import TypeAlias, cast
+from typing import cast
 
 from fastapi import FastAPI, Request
 
@@ -10,7 +10,7 @@ from jarvis.api.contracts import APIHealthResponse
 from jarvis.services.health_service import HealthService
 from jarvis.version import __version__
 
-APILifespan: TypeAlias = Callable[
+type APILifespan = Callable[
     [FastAPI],
     AbstractAsyncContextManager[None],
 ]
@@ -45,10 +45,7 @@ def create_api_app(
 
         checks = await health_service.check()
 
-        healthy = (
-            bool(checks)
-            and all(checks.values())
-        )
+        healthy = await health_service.is_operationally_ready()
 
         return APIHealthResponse(
             status=(

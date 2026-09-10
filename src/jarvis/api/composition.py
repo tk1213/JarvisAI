@@ -27,7 +27,7 @@ def create_production_api_app(
         app: FastAPI,
     ) -> AsyncIterator[None]:
         await jarvis_application.start(
-            start_background_tasks=False,
+            start_background_tasks=True,
             include_voice=False,
         )
 
