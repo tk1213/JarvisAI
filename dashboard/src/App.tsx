@@ -23,14 +23,24 @@ function formatCheckName(name: string): string {
     .join(' ')
 }
 
+function formatRequestError(
+  source: string,
+  reason: unknown,
+): string {
+  const message =
+    reason instanceof Error
+      ? reason.message
+      : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ'
+
+  return `${source}: ${message}`
+}
+
 function App() {
   const [health, setHealth] =
     useState<HealthResponse | null>(null)
   const [smartHome, setSmartHome] =
     useState<SmartHomeDevicesResponse | null>(null)
-  const [error, setError] = useState<string | null>(
-    null,
-  )
+  const [errors, setErrors] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [updatedAt, setUpdatedAt] =
@@ -47,28 +57,47 @@ function App() {
 
       try {
         const [healthResult, smartHomeResult] =
-          await Promise.all([
+          await Promise.allSettled([
             getHealth(signal),
             getSmartHomeDevices(signal),
           ])
 
-        setHealth(healthResult)
-        setSmartHome(smartHomeResult)
-        setUpdatedAt(new Date())
-        setError(null)
-      } catch (requestError) {
-        if (
-          requestError instanceof DOMException &&
-          requestError.name === 'AbortError'
-        ) {
+        if (signal?.aborted) {
           return
         }
 
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : 'ไม่สามารถโหลดข้อมูล Dashboard ได้',
-        )
+        const nextErrors: string[] = []
+        let updated = false
+
+        if (healthResult.status === 'fulfilled') {
+          setHealth(healthResult.value)
+          updated = true
+        } else {
+          nextErrors.push(
+            formatRequestError(
+              'System Health',
+              healthResult.reason,
+            ),
+          )
+        }
+
+        if (smartHomeResult.status === 'fulfilled') {
+          setSmartHome(smartHomeResult.value)
+          updated = true
+        } else {
+          nextErrors.push(
+            formatRequestError(
+              'Smart Home',
+              smartHomeResult.reason,
+            ),
+          )
+        }
+
+        if (updated) {
+          setUpdatedAt(new Date())
+        }
+
+        setErrors(nextErrors)
       } finally {
         setLoading(false)
         setRefreshing(false)
@@ -76,6 +105,7 @@ function App() {
     },
     [],
   )
+
   useEffect(() => {
     const controller = new AbortController()
 
@@ -113,7 +143,9 @@ function App() {
     <main className="dashboard-shell">
       <header className="dashboard-header">
         <div>
-          <p className="eyebrow">JARVIS CONTROL CENTER</p>
+          <p className="eyebrow">
+            JARVIS CONTROL CENTER
+          </p>
           <h1>System overview</h1>
           <p className="header-description">
             สถานะระบบและอุปกรณ์ Smart Home แบบอ่านอย่างเดียว
@@ -121,7 +153,10 @@ function App() {
         </div>
 
         <div className="header-actions">
-          <div className="updated-time" aria-live="polite">
+          <div
+            className="updated-time"
+            aria-live="polite"
+          >
             <span>อัปเดตล่าสุด</span>
             <strong>
               {updatedAt
@@ -142,22 +177,35 @@ function App() {
               void loadDashboard(undefined, true)
             }
           >
-            {refreshing ? 'กำลังอัปเดต…' : 'อัปเดตข้อมูล'}
+            {refreshing
+              ? 'กำลังอัปเดต…'
+              : 'อัปเดตข้อมูล'}
           </button>
         </div>
       </header>
 
-      {error && (
-        <section className="error-banner" role="alert">
+      {errors.length > 0 && (
+        <section
+          className="error-banner"
+          role="alert"
+        >
           <div>
-            <strong>เชื่อมต่อ API ไม่สำเร็จ</strong>
-            <p>{error}</p>
+            <strong>
+              ข้อมูลบางส่วนอัปเดตไม่สำเร็จ
+            </strong>
+
+            {errors.map((errorMessage) => (
+              <p key={errorMessage}>
+                {errorMessage}
+              </p>
+            ))}
           </div>
+
           <button
             type="button"
-          onClick={() =>
-            void loadDashboard(undefined, true)
-          }
+            onClick={() =>
+              void loadDashboard(undefined, true)
+            }
           >
             ลองอีกครั้ง
           </button>
@@ -183,13 +231,16 @@ function App() {
                 SYSTEM HEALTH
               </span>
               <strong>
-                {health?.status === 'healthy'
-                  ? 'Healthy'
-                  : 'Degraded'}
+                {health
+                  ? health.status === 'healthy'
+                    ? 'Healthy'
+                    : 'Degraded'
+                  : 'Unknown'}
               </strong>
               <p>
-                {healthyChecks} จาก {totalChecks}{' '}
-                ระบบย่อยพร้อมทำงาน
+                {health
+                  ? `${healthyChecks} จาก ${totalChecks} ระบบย่อยพร้อมทำงาน`
+                  : 'ยังไม่มีข้อมูลสถานะระบบ'}
               </p>
             </article>
 
@@ -198,12 +249,16 @@ function App() {
                 SMART HOME
               </span>
               <strong>
-                {smartHome?.connected
-                  ? 'Connected'
-                  : 'Disconnected'}
+                {smartHome
+                  ? smartHome.connected
+                    ? 'Connected'
+                    : 'Disconnected'
+                  : 'Unknown'}
               </strong>
               <p>
-                เชื่อมต่อผู้ให้บริการอุปกรณ์
+                {smartHome
+                  ? 'เชื่อมต่อผู้ให้บริการอุปกรณ์'
+                  : 'ยังไม่มีข้อมูลการเชื่อมต่อ'}
               </p>
             </article>
 
@@ -212,11 +267,12 @@ function App() {
                 ONLINE DEVICES
               </span>
               <strong>
-                {onlineDevices}
+                {smartHome ? onlineDevices : '—'}
               </strong>
               <p>
-                จาก {smartHome?.devices.length ?? 0}{' '}
-                อุปกรณ์
+                {smartHome
+                  ? `จาก ${smartHome.devices.length} อุปกรณ์`
+                  : 'ยังไม่มีข้อมูล'}
               </p>
             </article>
 
@@ -224,7 +280,9 @@ function App() {
               <span className="summary-label">
                 POWERED ON
               </span>
-              <strong>{poweredDevices}</strong>
+              <strong>
+                {smartHome ? poweredDevices : '—'}
+              </strong>
               <p>อุปกรณ์ที่กำลังเปิดอยู่</p>
             </article>
           </section>
@@ -238,11 +296,14 @@ function App() {
                   </p>
                   <h2>System checks</h2>
                 </div>
+
                 <span
                   className={`status-pill ${
-                    health?.status === 'healthy'
-                      ? 'status-good'
-                      : 'status-warning'
+                    health === null
+                      ? 'status-muted'
+                      : health.status === 'healthy'
+                        ? 'status-good'
+                        : 'status-warning'
                   }`}
                 >
                   {health?.status ?? 'unknown'}
@@ -250,22 +311,40 @@ function App() {
               </div>
 
               <div className="check-list">
-                {Object.entries(
-                  health?.checks ?? {},
-                ).map(([name, ready]) => (
-                  <div className="check-row" key={name}>
-                    <span
-                      className={`status-dot ${
-                        ready ? 'dot-good' : 'dot-warning'
-                      }`}
-                      aria-hidden="true"
-                    />
-                    <span>{formatCheckName(name)}</span>
+                {health ? (
+                  Object.entries(
+                    health.checks,
+                  ).map(([name, ready]) => (
+                    <div
+                      className="check-row"
+                      key={name}
+                    >
+                      <span
+                        className={`status-dot ${
+                          ready
+                            ? 'dot-good'
+                            : 'dot-warning'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span>
+                        {formatCheckName(name)}
+                      </span>
+                      <strong>
+                        {ready ? 'พร้อม' : 'ไม่พร้อม'}
+                      </strong>
+                    </div>
+                  ))
+                ) : (
+                  <div className="empty-state">
                     <strong>
-                      {ready ? 'พร้อม' : 'ไม่พร้อม'}
+                      ไม่สามารถโหลดสถานะระบบ
                     </strong>
+                    <p>
+                      ระบบจะลองเชื่อมต่อใหม่อัตโนมัติ
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             </article>
 
@@ -277,12 +356,22 @@ function App() {
                   </p>
                   <h2>Smart Home devices</h2>
                 </div>
+
                 <span className="read-only-badge">
                   READ ONLY
                 </span>
               </div>
 
-              {smartHome?.devices.length ? (
+              {smartHome === null ? (
+                <div className="empty-state">
+                  <strong>
+                    ไม่สามารถโหลดข้อมูล Smart Home
+                  </strong>
+                  <p>
+                    ระบบจะลองเชื่อมต่อใหม่อัตโนมัติ
+                  </p>
+                </div>
+              ) : smartHome.devices.length ? (
                 <div className="device-grid">
                   {smartHome.devices.map((device) => (
                     <article
