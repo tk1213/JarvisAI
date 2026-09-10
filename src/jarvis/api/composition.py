@@ -9,6 +9,7 @@ from jarvis.api.app import create_api_app
 from jarvis.core.application import JarvisApplication
 from jarvis.core.container import ServiceContainer, container
 from jarvis.services.health_service import HealthService
+from jarvis.smart_home.service import SmartHomeService
 
 
 def create_production_api_app(
@@ -35,6 +36,10 @@ def create_production_api_app(
             app.state.health = services.resolve(
                 "health",
                 HealthService,
+            )
+            app.state.smart_home = services.resolve(
+                "smart_home",
+                SmartHomeService,
             )
 
             yield

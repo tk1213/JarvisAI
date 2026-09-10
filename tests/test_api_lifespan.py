@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, call
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -9,6 +9,7 @@ from jarvis.api import create_production_api_app
 from jarvis.core.application import JarvisApplication
 from jarvis.core.container import ServiceContainer
 from jarvis.services.health_service import HealthService
+from jarvis.smart_home.service import SmartHomeService
 
 
 @pytest.mark.asyncio
@@ -31,10 +32,17 @@ async def test_production_api_uses_headless_lifecycle() -> None:
         return_value=True,
     )
 
+    smart_home = Mock(
+        spec=SmartHomeService,
+    )
+
     services = Mock(
         spec=ServiceContainer,
     )
-    services.resolve.return_value = health
+    services.resolve.side_effect = (
+        health,
+        smart_home,
+    )
 
     app = create_production_api_app(
         application=application,
@@ -49,6 +57,9 @@ async def test_production_api_uses_headless_lifecycle() -> None:
         transport=transport,
         base_url="http://test",
     ) as client:
+        assert app.state.health is health
+        assert app.state.smart_home is smart_home
+
         response = await client.get(
             "/api/v1/health"
         )
@@ -67,10 +78,16 @@ async def test_production_api_uses_headless_lifecycle() -> None:
     )
     application.shutdown.assert_awaited_once_with()
 
-    services.resolve.assert_called_once_with(
-        "health",
-        HealthService,
-    )
+    assert services.resolve.call_args_list == [
+        call(
+            "health",
+            HealthService,
+        ),
+        call(
+            "smart_home",
+            SmartHomeService,
+        ),
+    ]
 
     health.check.assert_awaited_once_with()
     health.is_operationally_ready.assert_awaited_once_with()
@@ -112,8 +129,9 @@ async def test_production_api_does_not_shutdown_after_failed_start() -> None:
     application.shutdown.assert_not_awaited()
     services.resolve.assert_not_called()
 
+
 @pytest.mark.asyncio
-async def test_production_api_shuts_down_after_service_resolution_failure(
+async def test_production_api_shuts_down_after_smart_home_resolution_failure(
 ) -> None:
     application = Mock(
         spec=JarvisApplication,
@@ -121,11 +139,18 @@ async def test_production_api_shuts_down_after_service_resolution_failure(
     application.start = AsyncMock()
     application.shutdown = AsyncMock()
 
+    health = Mock(
+        spec=HealthService,
+    )
+
     services = Mock(
         spec=ServiceContainer,
     )
-    services.resolve.side_effect = RuntimeError(
-        "controlled service resolution failure"
+    services.resolve.side_effect = (
+        health,
+        RuntimeError(
+            "controlled Smart Home resolution failure"
+        ),
     )
 
     app = create_production_api_app(
@@ -135,7 +160,7 @@ async def test_production_api_shuts_down_after_service_resolution_failure(
 
     with pytest.raises(
         RuntimeError,
-        match="controlled service resolution failure",
+        match="controlled Smart Home resolution failure",
     ):
         async with app.router.lifespan_context(app):
             pass
@@ -146,7 +171,13 @@ async def test_production_api_shuts_down_after_service_resolution_failure(
     )
     application.shutdown.assert_awaited_once_with()
 
-    services.resolve.assert_called_once_with(
-        "health",
-        HealthService,
-    )
+    assert services.resolve.call_args_list == [
+        call(
+            "health",
+            HealthService,
+        ),
+        call(
+            "smart_home",
+            SmartHomeService,
+        ),
+    ]
