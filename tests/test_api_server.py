@@ -33,12 +33,18 @@ def test_api_server_uses_configured_endpoint(
             return_value=api_app,
         ) as create_app,
         patch(
+            "jarvis.api.server.mount_dashboard",
+        ) as mount,
+        patch(
             "jarvis.api.server.uvicorn.run",
         ) as uvicorn_run,
     ):
         run_api_server()
 
     create_app.assert_called_once_with()
+    mount.assert_called_once_with(
+        api_app,
+    )
     uvicorn_run.assert_called_once_with(
         api_app,
         host="127.0.0.1",

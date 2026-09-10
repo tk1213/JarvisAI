@@ -3,11 +3,14 @@ from __future__ import annotations
 import uvicorn
 
 from jarvis.api.composition import create_production_api_app
+from jarvis.api.dashboard import mount_dashboard
 from jarvis.config import settings
 
 
 def run_api_server() -> None:
     app = create_production_api_app()
+
+    mount_dashboard(app)
 
     uvicorn.run(
         app,
