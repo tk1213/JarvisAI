@@ -7,8 +7,43 @@ The project is developed incrementally with a strong focus on stability,
 reliability, maintainability, bounded execution, safety, and real-world
 validation before feature expansion.
 
+## Current Production Baseline
 
-Current development baseline:
+```text
+Version         : 1.0.0
+Release tag     : v1.0.0
+Release commit  : 19ea6d4
+Branch          : main
+Dashboard baseline commit : 25b47d3
+Remote          : origin/main
+Full regression : 1165 passed
+Ruff            : PASS
+Python compile  : PASS
+Dashboard build : PASS
+npm audit       : 0 vulnerabilities
+```
+
+JarvisAI v1.0.0 is the validated production release. Current `main`
+contains tested post-release usability, reliability, external-search,
+Thai speech, Smart Home, API, and Dashboard improvements.
+
+The read-only production Dashboard is available after building the
+frontend:
+
+```powershell
+npm run build --prefix dashboard
+jarvis api
+```
+
+Open <http://127.0.0.1:8000>.
+
+The Dashboard currently exposes system health and Smart Home status
+only. It does not expose turn-on, turn-off, toggle, or other
+state-changing Smart Home operations.
+
+---
+
+Historical pre-v1.0 development baseline:
 
 ```text
 JarvisAI 0.7.0-alpha.1
@@ -30,7 +65,7 @@ Sprint 8.16: AI Agent Memory Startup Retention Failure Isolation & Cancellation 
 ```
 
 
-Current release checkpoint:
+Historical pre-v1.0 release checkpoint:
 
 ```text
 Version : 0.7.0-alpha.1
@@ -38,7 +73,7 @@ Git tag : v0.7.0-alpha.1
 Commit  : 6825df0
 ```
 
-Current post-release development baseline:
+Historical Sprint 8 development baseline:
 
 ```text
 Commit          : bfcda9a
@@ -122,6 +157,47 @@ live validation gates.
 ---
 
 # Current Capabilities
+
+## Read-only API and Dashboard
+
+JarvisAI includes a local monitoring interface built with FastAPI,
+React, TypeScript, and Vite.
+
+Current Dashboard capabilities include:
+
+- headless application startup without Voice or Audio initialization
+- application-managed startup and shutdown
+- system operational-health reporting
+- read-only Smart Home device listing
+- Tuya online and power-status display
+- automatic refresh every 15 seconds
+- manual refresh
+- loading, empty, degraded, and connection-error states
+- preservation of the latest successful data during API failures
+- automatic recovery after the API becomes available again
+- same-origin production serving through FastAPI
+- local binding to `127.0.0.1` by default
+
+Development mode uses two processes:
+
+```powershell
+jarvis api
+npm run dev --prefix dashboard
+```
+
+Production mode uses the built Dashboard through one process:
+
+```powershell
+npm run build --prefix dashboard
+jarvis api
+```
+
+Open <http://127.0.0.1:8000>.
+
+The Dashboard remains read-only. Smart Home state-changing API routes
+are intentionally not exposed.
+
+---
 
 ## Voice Runtime
 
@@ -1207,11 +1283,12 @@ sprint workflow.
 
 # Current Boundaries
 
-JarvisAI is still an alpha-stage system.
+JarvisAI v1.0.0 is a validated production release.
 
-The current release demonstrates validated production-oriented
-subsystems, but the project should not claim that every planned
-JARVIS capability is complete.
+The current `main` branch contains tested post-v1.0 improvements, but
+the project should not claim that every planned JARVIS capability is
+complete. Features added after the `v1.0.0` tag remain post-release
+development until a new release checkpoint is created.
 
 In particular:
 
@@ -1224,10 +1301,41 @@ In particular:
 - hardware-dependent behavior must be tested on the relevant hardware
 - new features must not regress the validated Sprint 6 voice baseline
 - new features must not regress the validated Sprint 7 Tuya baseline
+- the Dashboard must remain bound to localhost by default
+- Dashboard data must remain read-only until authentication and
+  authorization boundaries are implemented and validated
+- Smart Home write APIs must preserve explicit confirmation and
+  side-effect safety policies
+- frontend failures must not weaken backend runtime safety
 
 ---
 
 # Next Milestone
+
+## Dashboard Security and Authorization Boundary
+
+The next milestone will establish the security boundary required before
+any Dashboard management controls can be considered.
+
+The milestone includes:
+
+- authentication design
+- authorization policy
+- localhost and network-exposure policy
+- API security configuration
+- protected-route behavior
+- failed-authentication handling
+- audit requirements for state-changing requests
+- Smart Home confirmation-boundary compatibility
+- automated security regression coverage
+- live local validation
+
+No Smart Home turn-on, turn-off, toggle, or other state-changing
+Dashboard endpoint may be introduced until this milestone is complete.
+
+---
+
+# Historical Sprint 8 Milestones
 
 ## Sprint 8 - Continued Scope Selection
 
@@ -1611,9 +1719,13 @@ Sprint 8.16 validation confirms that:
 | --- | --- | --- | --- |
 | `v0.6.0-alpha.1` | Sprint 6 | Voice Runtime Reliability | Validated |
 | `v0.7.0-alpha.1` | Sprint 7 | Tuya Smart Home Reliability | Validated |
+| `v1.0.0-rc.1` | Sprint 12 | v1.0 Release Candidate | Validated |
+| `v1.0.0` | Sprint 13 | v1.0 Production Release | Validated |
 
-Current baseline:
+
+````markdown
+Current validated production release:
 
 ```text
-v0.7.0-alpha.1
+v1.0.0
 ```

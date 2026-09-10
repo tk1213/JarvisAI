@@ -2945,13 +2945,75 @@ production release:
 - Thai money, time, temperature, stock-price, and percentage speech normalization: PASS
 - Smart Plug STT phonetic recovery with confirmation safety: PASS
 
+## Post-v1.0 Dashboard Foundation
+
+Status: COMPLETE
+
+The read-only Dashboard foundation has been implemented after the
+`v1.0.0` production release.
+
+### Implemented Capabilities
+
+- FastAPI and Uvicorn runtime dependencies
+- read-only health API contract
+- headless application startup without Voice or Audio initialization
+- application-managed API startup and shutdown
+- local `jarvis api` command
+- read-only Smart Home device API
+- React, TypeScript, and Vite Dashboard
+- system-health summary
+- Smart Home connection summary
+- Tuya online and power-state display
+- manual and automatic data refresh
+- loading, empty, degraded, and API-error states
+- preservation of last successful data during API failure
+- recovery after API availability is restored
+- same-origin production Dashboard serving through FastAPI
+- localhost binding through `127.0.0.1` by default
+
+### Safety Boundary
+
+The Dashboard exposes read-only monitoring only.
+
+No turn-on, turn-off, toggle, or other state-changing Smart Home API
+route is exposed. Existing voice confirmation and physical-device safety
+boundaries remain unchanged.
+
+### Validation
+
+- Full automated regression suite: 1165 passed
+- Ruff: PASS
+- Python compile validation: PASS
+- Dashboard lint: PASS
+- Dashboard production build: PASS
+- npm audit: 0 vulnerabilities
+- `git diff --check`: PASS
+- live health API validation: PASS
+- live Tuya device-list API validation: PASS
+- live React Dashboard validation: PASS
+- production single-process Dashboard serving: PASS
+- API failure data-preservation validation: PASS
+- API recovery validation: PASS
+
+### Dashboard Foundation Result
+
+The read-only Dashboard foundation is complete.
+
+Validated commits:
+
+- `e4e3ce1` - add Dashboard API dependencies
+- `cf6db86` - add read-only health API contract
+- `328de4a` - add headless application startup
+- `31a7858` - add headless API application lifecycle
+- `21e8307` - add local read-only API command
+- `55f3564` - add read-only Smart Home devices API
+- `34fb7a2` - add read-only React Dashboard
+- `25b47d3` - preserve Dashboard data during API failures
+
 ### Next Milestone
 
-Dashboard and management interface inventory.
+Dashboard security and authorization boundary.
 
-The next milestone must begin with an audit of the existing API,
-operational-dashboard, authentication, authorization, and Smart Home
-safety boundaries before introducing FastAPI or React production code.
-
-Dashboard read-only capabilities must be established before any
-state-changing Smart Home controls are exposed.
+Authentication, authorization, network exposure, audit behavior, and
+Smart Home confirmation compatibility must be designed and validated
+before any state-changing Dashboard controls are introduced.
