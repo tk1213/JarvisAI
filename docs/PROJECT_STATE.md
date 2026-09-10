@@ -2,20 +2,29 @@ JarvisAI Project State
 
 Current Milestone
 
-Sprint 7 closeout.
+Post-v1.0 maintenance baseline.
 
-Current validated release baseline:
+Current validated production release:
 
-JarvisAI 0.7.0-alpha.1
-Sprint 7: Tuya Smart Home Reliability - COMPLETE
+JarvisAI 1.0.0
+Sprint 13: v1.0 Production Release - COMPLETE
 
-Release checkpoint:
+Production release checkpoint:
 
-Version : 0.7.0-alpha.1
-Git tag : v0.7.0-alpha.1
-Commit  : 6825df0
+Version : 1.0.0
+Git tag : v1.0.0
+Commit  : 19ea6d4
 
-Sprint 7 builds on the validated Sprint 6 voice-runtime baseline.
+Validated post-release code checkpoint:
+
+Branch               : main
+Code commit          : 9a8673d
+Code commits after v1.0.0 : 8
+Full regression      : 1149 passed
+
+JarvisAI v1.0.0 remains the validated production release. The current
+main branch includes tested post-release usability and reliability
+improvements.
 
 Engineering Status
 
@@ -2906,24 +2915,43 @@ The v1.0 production scope is complete.
 
 Release tag: `v1.0.0`
 
-The next Sprint 8 scope has not yet been fixed.
+## Post-v1.0 Maintenance Baseline
 
-Scope selection should be based on:
+Status: VALIDATED
 
-current implementation state
+Eight tested maintenance commits have been added after the `v1.0.0`
+production release:
 
-remaining production gaps
+- `85ce131` - improve Smart Home confirmation and cancellation prompts
+- `75f9f8d` - support continuous voice sessions with a 20-second inactivity timeout
+- `5c6cb95` - add read-only OpenAI web search support
+- `8113ef5` - normalize Thai money and time for speech
+- `dc2f1c3` - improve Thai time speech normalization
+- `8846af5` - normalize Thai percentage speech
+- `f6b10d7` - increase the default Thai speech speed
+- `9a8673d` - handle Smart Plug STT phonetic variants
 
-architecture consistency
+### Post-v1.0 Validation
 
-reliability risk
+- Full automated regression suite: 1149 passed
+- Ruff: PASS
+- Python compile validation: PASS
+- `git diff --check`: PASS
+- Working tree before documentation update: CLEAN
+- Production voice and Tuya live validation: PASS
+- Continuous 20-second conversation timeout: PASS
+- Smart Home explicit confirmation safety: PASS
+- Read-only external information search: PASS
+- Thai money, time, temperature, stock-price, and percentage speech normalization: PASS
+- Smart Plug STT phonetic recovery with confirmation safety: PASS
 
-regression risk
+### Next Milestone
 
-safety implications
+Dashboard and management interface inventory.
 
-real-world usability
+The next milestone must begin with an audit of the existing API,
+operational-dashboard, authentication, authorization, and Smart Home
+safety boundaries before introducing FastAPI or React production code.
 
-No Sprint 8 feature should be considered complete until its
-implementation, automated regression, documentation, and relevant live
-validation have passed.
+Dashboard read-only capabilities must be established before any
+state-changing Smart Home controls are exposed.
