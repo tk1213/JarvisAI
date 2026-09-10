@@ -6,8 +6,12 @@ pydantic-settings
 sqlalchemy
 aiosqlite
 openai
+httpx
+fastapi>=0.141.1,<0.142.0
+uvicorn>=0.52.4,<0.53.0
+tzdata
 sounddevice
 numpy
 soundfile
 scipy
-tzdata
+py-open-wakeword
