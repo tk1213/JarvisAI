@@ -292,10 +292,17 @@ class ServiceFactory:
             overwrite=False,
         )
 
-    def register_all(self) -> None:
+    def register_all(
+        self,
+        *,
+        include_voice: bool = True,
+    ) -> None:
         self.register_core()
         self.register_smart_home()
         self.register_ai()
+
+        if not include_voice:
+            return
 
         try:
             self.register_voice()
@@ -304,4 +311,4 @@ class ServiceFactory:
             log.exception(
                 "Voice subsystem registration failed; "
                 "continuing without voice runtime"
-            )
+    )

@@ -71,6 +71,7 @@ class JarvisApplication:
     async def start(
         self,
         start_background_tasks: bool = True,
+        include_voice: bool = True,
     ) -> None:
         if self.started:
             return
@@ -84,7 +85,9 @@ class JarvisApplication:
 
         try:
             factory = ServiceFactory(container)
-            factory.register_all()
+            factory.register_all(
+                include_voice=include_voice,
+            )
 
             self._wake_word_created = container.has(
                 "wake_word"
